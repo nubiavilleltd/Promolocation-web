@@ -121,29 +121,29 @@
 }
 
 #incidentHistoryTable {
-  min-width: 1080px;
+  min-width: 920px;
   table-layout: fixed;
 }
 
 #incidentHistoryTable .help-desk-status-col {
-  width: 160px;
+  width: 150px;
+  text-align: right;
 }
 
 #incidentHistoryTable .help-desk-request-col {
-  width: 42%;
+  width: 38%;
 }
 
 #incidentHistoryTable .help-desk-type-col {
-  width: 190px;
+  width: 170px;
 }
 
 #incidentHistoryTable .help-desk-requester-col {
-  width: 190px;
+  width: 180px;
 }
 
 #incidentHistoryTable .help-desk-date-col {
-  width: 120px;
-  text-align: right;
+  width: 118px;
 }
 
 .data-table thead th {
@@ -174,27 +174,12 @@
   transition: background 0.15s ease;
 }
 
-.data-table tbody tr.help-desk-row {
-  position: relative;
-}
-
-.data-table tbody tr.help-desk-row::before {
-  content: "";
-  position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 0;
-  width: 4px;
-  border-radius: 0 999px 999px 0;
-  background: var(--request-status-color, #6b7280);
-}
-
 .data-table tbody tr.help-desk-row:nth-child(even) td {
-  background: #fbfdff;
+  background: #fcfdff;
 }
 
 .data-table tbody tr.help-desk-row td {
-  border-bottom-color: #dbe7f5;
+  border-bottom-color: #e5eaf0;
 }
 
 .data-table tbody tr.clickable-row {
@@ -1589,10 +1574,36 @@
 
 .help-desk-card {
   flex: 0 1 auto;
+  gap: 12px;
+  border-color: #e5eaf0;
+  background: #ffffff;
+  padding: 20px;
 }
 
 .help-desk-header {
   align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+.help-desk-header h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.help-desk-header h2 span {
+  color: #7a8aa3;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.help-desk-header p {
+  max-width: 650px;
+  margin: 6px 0 0;
+  color: #5f718c;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .help-desk-header-actions {
@@ -1604,74 +1615,47 @@
 }
 
 .help-desk-header-actions .search-bar {
-  width: min(360px, 42vw);
+  width: min(330px, 38vw);
 }
 
-.help-desk-summary-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.help-desk-summary-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  min-height: 52px;
-  border: 1px solid var(--border-blue);
-  border-radius: 8px;
-  background: #ffffff;
-  color: var(--navy);
-  padding: 0 14px;
-  text-align: left;
-  cursor: pointer;
-  appearance: none;
-  font: inherit;
-}
-
-.help-desk-summary-item.is-selected,
-.help-desk-summary-item:hover {
-  border-color: #2563eb;
-  background: #f8fbff;
-}
-
-.help-desk-summary-item span:not(.help-desk-summary-dot) {
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.help-desk-summary-item strong {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.help-desk-summary-dot,
 .help-desk-status-dot {
   display: inline-block;
   flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
 }
 
-.help-desk-attention-bar {
-  display: flex;
+.help-desk-attention-note {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin: -2px 0 14px;
-  border: 1px solid #fde68a;
-  border-radius: 8px;
-  background: #fffbeb;
-  color: #92400e;
-  padding: 10px 12px;
+  align-self: flex-start;
+  gap: 7px;
+  border: none;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  padding: 6px 10px;
   font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
-.help-desk-attention-bar strong {
-  color: #78350f;
-  font-weight: 900;
+.help-desk-attention-note:hover {
+  background: #ffedd5;
+}
+
+.help-desk-attention-note:focus-visible {
+  outline: 2px solid #fb923c;
+  outline-offset: 2px;
+}
+
+.help-desk-attention-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #f97316;
 }
 
 .help-desk-toolbar {
@@ -1680,7 +1664,7 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 2px;
 }
 
 .help-desk-filter-group,
@@ -1693,36 +1677,54 @@
 
 .help-desk-filter-chip {
   appearance: none;
-  min-height: 36px;
-  border: 1px solid #dbe7f5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid #d8e0ea;
   border-radius: 999px;
   background: #ffffff;
-  color: #53709f;
-  font-size: 13px;
+  color: #536477;
+  font-size: 12px;
   font-weight: 800;
-  padding: 0 12px;
+  padding: 0 10px;
   cursor: pointer;
+}
+
+.help-desk-filter-chip strong {
+  color: #8492a6;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .help-desk-filter-chip:hover,
 .help-desk-filter-chip.is-selected {
   border-color: var(--chip-color, #2563eb);
   color: var(--chip-color, #2563eb);
-  background: #f8fbff;
+  background: #f7faff;
+}
+
+.help-desk-filter-chip.is-selected strong {
+  color: inherit;
 }
 
 .help-desk-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-width: 118px;
+  gap: 6px;
+  min-width: 0;
   justify-content: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 12px;
   font-weight: 800;
+  line-height: 1;
 }
 
 .help-desk-card .table-outer-border {
   flex: 0 0 auto;
   min-height: 0;
+  border-color: #e5eaf0;
   overflow-x: auto;
   overflow-y: visible;
 }
@@ -1732,8 +1734,14 @@
 }
 
 .help-desk-card .data-table tbody td {
-  padding-top: 18px;
-  padding-bottom: 18px;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.help-desk-card .data-table thead th {
+  background: #f6f8fb;
+  border-bottom-color: #e5eaf0;
+  color: #4a5a70;
 }
 
 .help-desk-request-cell,
@@ -1767,7 +1775,7 @@
 
 .help-desk-relative-time {
   display: inline-block;
-  color: #53709f;
+  color: #61728a;
   font-weight: 800;
 }
 
@@ -2234,7 +2242,7 @@
 
 .qr-repository-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(150px, 0.7fr) repeat(3, minmax(150px, 1fr));
+  grid-template-columns: minmax(220px, 1.4fr) repeat(5, minmax(140px, 1fr));
   align-items: end;
   gap: 12px;
   border: 1px solid #d8e6fb;
@@ -4508,8 +4516,14 @@
     width: 100%;
   }
 
-  .help-desk-summary-strip {
-    grid-template-columns: 1fr;
+  .help-desk-card {
+    padding: 16px;
+  }
+
+  .help-desk-attention-note {
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
   }
 
   .help-desk-filter-group {

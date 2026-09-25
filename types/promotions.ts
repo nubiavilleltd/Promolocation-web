@@ -191,6 +191,8 @@ export type ListQrCodesPayload = {
   promoterId?: string;
   promotionCode?: string;
   brand?: string;
+  startDate?: string;
+  endDate?: string;
   page?: number;
   perPage?: number;
 };

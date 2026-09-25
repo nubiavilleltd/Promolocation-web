@@ -264,9 +264,12 @@ a {
   color: white;
   display: flex;
   flex-direction: column;
+  align-self: flex-start;
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
+  height: 100vh;
   min-height: 100vh;
+  max-height: 100vh;
   padding: 40px 0;
   overflow-y: auto;
   overflow-x: hidden;

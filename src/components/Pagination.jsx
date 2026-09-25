@@ -1,8 +1,13 @@
 import React from "react";
 import { getVisiblePages } from "../utils/formatters";
 
-export default function Pagination({ currentPage, totalPages, onPageChange }) {
-  if (totalPages <= 1) {
+export default function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  showSinglePage = false,
+}) {
+  if (totalPages <= 1 && !showSinglePage) {
     return null;
   }
 

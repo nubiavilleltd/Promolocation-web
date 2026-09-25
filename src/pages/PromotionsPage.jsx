@@ -1860,11 +1860,8 @@ function PromotionsListView() {
 }
 
 function UploadedPromoterBrandsTable({
-  deletingAssignmentId,
   isError,
   isLoading,
-  onDeleteAssignment,
-  onEditAssignment,
   promotion,
   promotionBrands,
   promotionBrandsError,
@@ -2012,29 +2009,6 @@ function UploadedPromoterBrandsTable({
             key: "lastModified",
             render: (brand) =>
               formatDate((brand.lastModified || brand.createdAt)?.slice(0, 10)),
-          },
-          {
-            header: "Actions",
-            key: "actions",
-            render: (brand) => (
-              <div className="brand-admin-actions">
-                <button
-                  type="button"
-                  onClick={() => onEditAssignment?.(brand)}
-                  disabled={deletingAssignmentId === brand.id}
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  className="is-danger"
-                  onClick={() => onDeleteAssignment?.(brand)}
-                  disabled={deletingAssignmentId === brand.id}
-                >
-                  {deletingAssignmentId === brand.id ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-            ),
           },
         ]}
         dependencies={[promoId, searchTerm, sortedPromotionBrands.length]}
@@ -3294,11 +3268,8 @@ function PromotionManagementView({
         </section>
 
         <UploadedPromoterBrandsTable
-          deletingAssignmentId={deletingAssignmentId}
           isError={isPromotionBrandsError}
           isLoading={isLoadingPromotionBrands}
-          onDeleteAssignment={handleAssignmentDelete}
-          onEditAssignment={openAssignmentEditModal}
           promotion={promotion}
           promotionBrands={promotionBrands}
           promotionBrandsError={promotionBrandsError}

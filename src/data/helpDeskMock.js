@@ -2,17 +2,17 @@ export const HELP_DESK_REQUEST_TYPES = [
   {
     value: "incident_report",
     label: "Incident Report",
-    description: "Operational issues, field incidents, complaints, or QR problems.",
+    description: "In-app issues.",
   },
   {
-    value: "change_access",
-    label: "Change / Access Request",
-    description: "Permission changes, account access, password help, or record updates.",
+    value: "change_request",
+    label: "Change Request",
+    description: "Updates to promotions, agencies, brands, or promoter details.",
   },
   {
-    value: "setup_request",
-    label: "Setup Request",
-    description: "New agencies, promoters, brands, promotions, or onboarding support.",
+    value: "access_request",
+    label: "Access Request",
+    description: "New account access, permission changes, or role grants.",
   },
 ];
 
@@ -28,15 +28,14 @@ export const HELP_DESK_STATUSES = [
 export const mockHelpDeskRequests = [
   {
     id: "REQ-1007",
-    requestType: "setup_request",
-    requestTypeLabel: "Setup Request",
+    requestType: "change_request",
+    requestTypeLabel: "Change Request",
     issue: "Create Skyline agency and onboard new promoter batch",
-    category: "Agency & Promoter Setup",
+    category: "Agency & Promoter Change",
     description:
       "Please create the Skyline agency, then add 12 new promoters assigned to that agency. The requester will send the final promoter list after approval.",
     status: "Submitted",
     priority: "High",
-    agencyName: "All Agencies",
     requesterName: "Amina Yusuf",
     requesterRole: "specialadmin",
     date: "2026-08-31 09:15:00",
@@ -56,15 +55,14 @@ export const mockHelpDeskRequests = [
   },
   {
     id: "REQ-1006",
-    requestType: "change_access",
-    requestTypeLabel: "Change / Access Request",
+    requestType: "access_request",
+    requestTypeLabel: "Access Request",
     issue: "Grant Zipline admin access to regional supervisor",
     category: "Access Management",
     description:
       "Regional supervisor needs dashboard access for Zipline only. Access should not include all-agency visibility.",
     status: "In Progress",
     priority: "Medium",
-    agencyName: "Zipline",
     requesterName: "Daniel Okafor",
     requesterRole: "specialadmin",
     date: "2026-08-30 14:40:00",
@@ -98,8 +96,7 @@ export const mockHelpDeskRequests = [
     description:
       "Several promoters reported that the QR code opens a blank page during customer engagement. The issue appears limited to one promotion.",
     status: "Resolved",
-    priority: "Urgent",
-    agencyName: "Zipline",
+    priority: "High",
     requesterName: "Maya Chen",
     requesterRole: "specialadmin",
     date: "2026-08-29 11:20:00",
@@ -135,15 +132,14 @@ export const mockHelpDeskRequests = [
   },
   {
     id: "REQ-1004",
-    requestType: "setup_request",
-    requestTypeLabel: "Setup Request",
+    requestType: "change_request",
+    requestTypeLabel: "Change Request",
     issue: "Add two new brands to the system catalog",
     category: "Brand Setup",
     description:
       "Add two approved brands to the global brand catalog with their logos so they can be assigned to upcoming promotions.",
     status: "Closed",
     priority: "Low",
-    agencyName: "All Agencies",
     requesterName: "Fatima Bello",
     requesterRole: "specialadmin",
     date: "2026-08-27 16:25:00",

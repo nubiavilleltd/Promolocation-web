@@ -98,22 +98,7 @@ function BackArrow() {
   );
 }
 
-function PhotoPlaceholder() {
-  return (
-    <div className="photo-placeholder">
-      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5">
-        <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-        <circle cx="9" cy="9" r="2" />
-        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-      </svg>
-      <span>No photo available</span>
-    </div>
-  );
-}
-
 export default function IncidentDetailPage() {
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [hasImageError, setHasImageError] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [adminNote, setAdminNote] = useState("");
   const adminCommentTextareaRef = useRef(null);
@@ -141,10 +126,6 @@ export default function IncidentDetailPage() {
   useAutoResizeTextarea(adminCommentTextareaRef, adminNote);
 
   useEffect(() => {
-    setHasImageError(false);
-  }, [request?.image]);
-
-  useEffect(() => {
     if (!request) {
       setSelectedStatus("");
       setAdminNote("");
@@ -154,28 +135,6 @@ export default function IncidentDetailPage() {
     setSelectedStatus("");
     setAdminNote(canUpdateRequest ? "" : request.adminNote || "");
   }, [request, canUpdateRequest]);
-
-  useEffect(() => {
-    if (!isLightboxOpen) {
-      document.body.style.overflow = "";
-      return undefined;
-    }
-
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setIsLightboxOpen(false);
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = "";
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isLightboxOpen]);
 
   if (!request) {
     return (
@@ -197,7 +156,7 @@ export default function IncidentDetailPage() {
     );
   }
 
-  const imageSource = request.image ? assetPath(request.image) : null;
+  const attachmentSource = request.image ? assetPath(request.image) : null;
   const trimmedAdminNote = adminNote.trim();
 
   const handleStatusUpdate = async (event) => {
@@ -286,130 +245,108 @@ export default function IncidentDetailPage() {
       <div className="detail-wrapper">
         <button type="button" className="back-btn" onClick={() => navigate("/incidents")}>
           <BackArrow />
-          Back to Help Desk
+          Back to Requests
         </button>
 
-        <h1 className="page-title">Request Details</h1>
+        <div className="detail-heading-row">
+          <div>
+            <span className="detail-overline">REQUEST TITLE</span>
+            <h1 className="page-title">{request.issue}</h1>
+            <p className="detail-heading-meta">
+              <span>{request.id}</span>
+            </p>
+          </div>
+          <span
+            className="status-pill detail-status-pill"
+            style={{
+              color: statusColor,
+              backgroundColor: `${statusColor}14`,
+            }}
+          >
+            <span className="detail-status-dot" style={{ backgroundColor: statusColor }} />
+            {request.status || "Unknown"}
+          </span>
+        </div>
 
         <div className="incident-card">
-          <div className="incident-top">
-            <div className="report-section">
-              <h3 className="card-section-title">Request Summary:</h3>
-              <div className="report-rows">
-                <div className="report-row">
-                  <span className="row-label">Request ID:</span>
-                  <span className="row-value">{request.id}</span>
+          <section className="detail-section detail-summary-section">
+            <div className="detail-section-heading">
+              <div>
+                <span className="detail-section-kicker">SUBMITTED</span>
+                <h2>Submitted information</h2>
+              </div>
+            </div>
+            <div className="detail-meta-grid detail-submitted-meta-grid">
+              <div className="detail-meta-item">
+                <span>Request type</span>
+                <strong>{request.requestTypeLabel || "—"}</strong>
+              </div>
+              <div className="detail-meta-item">
+                <span>Requester</span>
+                <strong>{request.requesterName || "—"}</strong>
+              </div>
+              <div className="detail-meta-item">
+                <span>Priority</span>
+                <strong>{request.priority || "—"}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="detail-section">
+            <div className="detail-section-heading">
+              <div>
+                <span className="detail-section-kicker">REQUEST</span>
+                <h2>Request details</h2>
+              </div>
+            </div>
+            <div className="detail-content-grid detail-submitted-content-grid">
+              <div className="detail-content-block detail-content-block-wide">
+                <h3>Description</h3>
+                <div className="description-box">
+                  <p>{request.description || "—"}</p>
                 </div>
-                <div className="report-row">
-                  <span className="row-label">Type:</span>
-                  <span className="row-value">{request.requestTypeLabel}</span>
-                </div>
-                <div className="report-row">
-                  <span className="row-label">Date &amp; Time:</span>
-                  <span className="row-value">{formatLongDate(request.date)}</span>
-                </div>
-                <div className="report-row">
-                  <span className="row-label">Current Status:</span>
-                  <span className="row-value status-value">
-                    <span>{request.status || "—"}</span>
-                    <span
-                      className="status-dot"
-                      style={{ backgroundColor: statusColor }}
-                    ></span>
-                  </span>
-                </div>
-                <div className="report-row last-row">
-                  <span className="row-label">Priority:</span>
-                  <span className="row-value">{request.priority || "—"}</span>
+              </div>
+              <div className="detail-content-block">
+                <h3>Attachment</h3>
+                <div className={`detail-attachment-box${attachmentSource ? " has-attachment" : ""}`}>
+                  {attachmentSource ? (
+                    <img
+                      src={attachmentSource}
+                      alt={`Attachment for ${request.issue}`}
+                    />
+                  ) : (
+                    <p>No attachment provided.</p>
+                  )}
                 </div>
               </div>
             </div>
-
-            <div className="photo-section">
-              <h3 className="card-section-title">Attachment:</h3>
-              <div
-                className="photo-frame"
-                role={imageSource && !hasImageError ? "button" : undefined}
-                tabIndex={imageSource && !hasImageError ? 0 : undefined}
-                onClick={() => {
-                  if (imageSource && !hasImageError) {
-                    setIsLightboxOpen(true);
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if ((event.key === "Enter" || event.key === " ") && imageSource && !hasImageError) {
-                    event.preventDefault();
-                    setIsLightboxOpen(true);
-                  }
-                }}
-              >
-                {imageSource && !hasImageError ? (
-                  <img
-                    src={imageSource}
-                    alt={`Attachment for request ${request.id}`}
-                    onError={() => setHasImageError(true)}
-                  />
-                ) : (
-                  <PhotoPlaceholder />
-                )}
-              </div>
-            </div>
-          </div>
-
-          <hr className="section-divider" />
-
-          <div className="description-section">
-            <h3 className="card-section-title">Request:</h3>
-            <div className="report-rows">
-              <div className="report-row">
-                <span className="row-label">Requester:</span>
-                <span className="row-value">{request.requesterName || "—"}</span>
-              </div>
-              <div className="report-row">
-                <span className="row-label">Agency:</span>
-                <span className="row-value">{request.agencyName || "—"}</span>
-              </div>
-              <div className="report-row last-row">
-                <span className="row-label">Category:</span>
-                <span className="row-value">{request.category || "—"}</span>
-              </div>
-            </div>
-            <div className="description-box">
-              <p>{request.description || "—"}</p>
-            </div>
-          </div>
-
-          <hr className="section-divider" />
-
-          <div className="description-section">
-            <h3 className="card-section-title">Affected Records:</h3>
-            <div className="description-box">
-              {(request.affectedRecords || []).length ? (
-                request.affectedRecords.map((record) => <p key={record}>{record}</p>)
-              ) : (
-                <p>—</p>
-              )}
-            </div>
-          </div>
+          </section>
 
           {request.resolutionSummary ? (
-            <>
-              <hr className="section-divider" />
-
-              <div className="description-section">
-                <h3 className="card-section-title">Resolution Summary:</h3>
+            <section className="detail-section">
+              <div className="detail-section-heading">
+                <div>
+                  <span className="detail-section-kicker">OUTCOME</span>
+                  <h2>Resolution summary</h2>
+                </div>
+              </div>
+              <div className="resolution-box">
+                <span className="resolution-check" aria-hidden="true">✓</span>
                 <div className="description-box">
                   <p>{request.resolutionSummary}</p>
                 </div>
               </div>
-            </>
+            </section>
           ) : null}
 
-          <hr className="section-divider" />
-
-          <div className="description-section">
-            <h3 className="card-section-title">{requestActionTitle}:</h3>
-            <p style={{ marginBottom: "16px", color: "#64748b" }}>{requestActionHelperCopy}</p>
+          <section className="detail-section detail-action-section">
+            <div className="detail-section-heading">
+              <div>
+                <span className="detail-section-kicker">WORKFLOW</span>
+                <h2>{requestActionTitle}</h2>
+              </div>
+            </div>
+            <p className="detail-helper-copy">{requestActionHelperCopy}</p>
             <form className="incident-action-form" onSubmit={handleStatusUpdate} noValidate>
               <div className="incident-action-grid">
                 <div className="incident-input-group">
@@ -469,12 +406,15 @@ export default function IncidentDetailPage() {
                 </button>
               </div>
             </form>
-          </div>
+          </section>
 
-          <hr className="section-divider" />
-
-          <div className="description-section">
-            <h3 className="card-section-title">Audit Trail:</h3>
+          <section className="detail-section detail-audit-section">
+            <div className="detail-section-heading">
+              <div>
+                <span className="detail-section-kicker">HISTORY</span>
+                <h2>Audit trail</h2>
+              </div>
+            </div>
             <p className="audit-trail-copy">
               Every request action is recorded here so the full review history stays visible.
             </p>
@@ -510,33 +450,9 @@ export default function IncidentDetailPage() {
               tableClassName="audit-trail-table"
               wrapperClassName="audit-trail-table-wrapper"
             />
-          </div>
+          </section>
         </div>
       </div>
-
-      {isLightboxOpen && imageSource ? (
-        <div
-          className="lightbox-overlay active"
-          role="presentation"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setIsLightboxOpen(false);
-            }
-          }}
-        >
-          <div className="lightbox-inner">
-            <button
-              type="button"
-              className="lightbox-close"
-              title="Close"
-              onClick={() => setIsLightboxOpen(false)}
-            >
-              &#x2715;
-            </button>
-            <img src={imageSource} alt="Request attachment" />
-          </div>
-        </div>
-      ) : null}
     </AppLayout>
   );
 }
