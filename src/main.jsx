@@ -13,6 +13,8 @@ import "./styles/incident-history-redesign.css";
 
 const queryClient = new QueryClient();
 
+console.log("Promolocation app started");
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
