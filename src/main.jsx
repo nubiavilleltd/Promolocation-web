@@ -8,8 +8,12 @@ import "./styles/auth.css";
 import "./styles/dashboard.css";
 import "./styles/add-promoter.css";
 import "./styles/incident-detail.css";
+import "./styles/incident-detail-redesign.css";
+import "./styles/incident-history-redesign.css";
 
 const queryClient = new QueryClient();
+
+console.log("Promolocation app started");
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

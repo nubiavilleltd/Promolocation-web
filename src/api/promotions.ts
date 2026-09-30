@@ -374,6 +374,14 @@ export async function listQrCodes(
     requestBody.brand = brand;
   }
 
+  if (payload.startDate) {
+    requestBody.start_date = payload.startDate;
+  }
+
+  if (payload.endDate) {
+    requestBody.end_date = payload.endDate;
+  }
+
   if (payload.page !== undefined) {
     requestBody.page = payload.page;
   }

@@ -18,6 +18,8 @@ export const promotionKeys = {
     promoterId?: string;
     promotionCode?: string;
     brand?: string;
+    startDate?: string;
+    endDate?: string;
   }) => ["promotions", "qr-codes", filters] as const,
 };
 

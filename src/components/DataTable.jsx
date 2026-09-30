@@ -24,10 +24,12 @@ export default function DataTable({
   emptyMessage = "No records found.",
   error,
   errorMessage,
+  footerContent,
   footerClassName = "card-footer",
   getRowKey,
   isError = false,
   isLoading = false,
+  alwaysShowPagination = false,
   items = [],
   loadingMessage = "Loading...",
   pageSize,
@@ -120,10 +122,19 @@ export default function DataTable({
       </div>
 
       <div className={footerClassName}>
+        {typeof footerContent === "function"
+          ? footerContent({
+              currentPage,
+              pageSize: resolvedPageSize,
+              paginatedItems,
+              totalPages,
+            })
+          : footerContent}
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
+          showSinglePage={alwaysShowPagination}
         />
       </div>
     </>

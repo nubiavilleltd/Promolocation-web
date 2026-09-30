@@ -15,10 +15,11 @@ import {
   updatePromoter,
 } from "../api/promoters";
 
-export function usePromoters() {
+export function usePromoters(enabled = true) {
   return useQuery<Promoter[], Error>({
     queryKey: ["promoters"],
     queryFn: getPromoters,
+    enabled,
   });
 }
 

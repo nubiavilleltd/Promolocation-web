@@ -2,28 +2,26 @@ import React from "react";
 import { useMemo, useState } from "react";
 import AppLayout from "../components/AppLayout";
 import DataTable from "../components/DataTable";
-import { SelectInput, TextInput } from "../components/FormControls";
+import { DateInput, TextInput } from "../components/FormControls";
 import SearchBar from "../components/SearchBar";
 import { useQrCodes } from "../hooks/use-promotions";
+import { usePromoters } from "../hooks/use-promoters";
 import { useAuthStore } from "../store/auth-store";
 import {
+  adminCanViewAgency,
   adminCanSelectAgency,
+  getAgencyId,
   getAgencyLabel,
-  scopeRecordsByAgency,
+  getAgencyName,
 } from "../utils/agency";
 
 const EMPTY_FILTERS = {
   brand: "",
   promoterId: "",
   promotionCode: "",
+  startDate: "",
+  endDate: "",
 };
-
-const GROUP_OPTIONS = [
-  { label: "Date Added", value: "dateAdded" },
-  { label: "Promotion", value: "promotion" },
-  { label: "Brand", value: "brand" },
-  { label: "Promoter", value: "promoter" },
-];
 
 function formatDate(value) {
   if (!value) {
@@ -54,22 +52,6 @@ function getQrDisplayName(record) {
   }
 }
 
-function getGroupValue(record, groupBy) {
-  if (groupBy === "dateAdded") {
-    return formatDate(record.createdAt);
-  }
-
-  if (groupBy === "brand") {
-    return record.brandName || "No brand";
-  }
-
-  if (groupBy === "promoter") {
-    return record.promoterId || "No promoter";
-  }
-
-  return record.promotionName || record.promotionCode || "No promotion";
-}
-
 function getPromotionStatusClass(record) {
   if (record.promotionActive) {
     return "is-active";
@@ -86,25 +68,13 @@ function getPromotionStatusClass(record) {
   return "is-inactive";
 }
 
-function sortQrCodes(records, groupBy) {
+function sortQrCodes(records) {
   return [...records].sort((firstRecord, secondRecord) => {
-    if (groupBy === "dateAdded") {
-      const firstTime = new Date(String(firstRecord.createdAt || 0).replace(" ", "T")).getTime();
-      const secondTime = new Date(String(secondRecord.createdAt || 0).replace(" ", "T")).getTime();
+    const firstTime = new Date(String(firstRecord.createdAt || 0).replace(" ", "T")).getTime();
+    const secondTime = new Date(String(secondRecord.createdAt || 0).replace(" ", "T")).getTime();
 
-      if (firstTime !== secondTime) {
-        return secondTime - firstTime;
-      }
-    }
-
-    const groupCompare = getGroupValue(firstRecord, groupBy).localeCompare(
-      getGroupValue(secondRecord, groupBy),
-      undefined,
-      { numeric: true, sensitivity: "base" },
-    );
-
-    if (groupCompare !== 0) {
-      return groupCompare;
+    if (firstTime !== secondTime) {
+      return secondTime - firstTime;
     }
 
     return [
@@ -124,6 +94,19 @@ function sortQrCodes(records, groupBy) {
       );
     }, 0);
   });
+}
+
+function recordMatchesDateRange(record, startDate, endDate) {
+  const createdDate = String(record.createdAt || "").slice(0, 10);
+
+  if ((startDate || endDate) && !createdDate) {
+    return false;
+  }
+
+  return (
+    (!startDate || createdDate >= startDate) &&
+    (!endDate || createdDate <= endDate)
+  );
 }
 
 function recordMatchesSearch(record, searchTerm) {
@@ -149,12 +132,21 @@ function recordMatchesSearch(record, searchTerm) {
     .some((value) => String(value).toLowerCase().includes(normalizedSearch));
 }
 
+function normalizePromoterKey(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
 export default function QrCodesPage() {
   const authUser = useAuthStore((state) => state.user);
   const canViewAllAgencies = adminCanSelectAgency(authUser);
+  const {
+    data: promoters = [],
+    error: promotersError,
+    isError: isPromotersError,
+    isLoading: isPromotersLoading,
+  } = usePromoters(!canViewAllAgencies);
   const [draftFilters, setDraftFilters] = useState(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState(EMPTY_FILTERS);
-  const [groupBy, setGroupBy] = useState("dateAdded");
   const [searchTerm, setSearchTerm] = useState("");
   const {
     data: qrCodes = [],
@@ -166,19 +158,66 @@ export default function QrCodesPage() {
     brand: appliedFilters.brand,
     promoterId: appliedFilters.promoterId,
     promotionCode: appliedFilters.promotionCode,
+    startDate: appliedFilters.startDate,
+    endDate: appliedFilters.endDate,
   });
   const hasActiveFilters = Object.values(appliedFilters).some(Boolean);
+  const isApplyingFilters = isFetching && hasActiveFilters;
+  const qrCodesIncludeAgencyMetadata = qrCodes.some(
+    (record) => Boolean(getAgencyId(record) || getAgencyName(record)),
+  );
+  const promotersById = useMemo(
+    () =>
+      new Map(
+        promoters
+          .filter((promoter) => promoter.promoterId)
+          .map((promoter) => [
+            normalizePromoterKey(promoter.promoterId),
+            promoter,
+          ]),
+      ),
+    [promoters],
+  );
+  const needsPromoterAgencyLookup =
+    !canViewAllAgencies && !qrCodesIncludeAgencyMetadata;
   const scopedQrCodes = useMemo(
-    () => scopeRecordsByAgency(qrCodes, authUser),
-    [authUser, qrCodes],
+    () => {
+      if (canViewAllAgencies) {
+        return qrCodes;
+      }
+
+      return qrCodes.filter((record) => {
+        const hasAgencyMetadata = Boolean(
+          getAgencyId(record) || getAgencyName(record),
+        );
+
+        if (hasAgencyMetadata) {
+          return adminCanViewAgency(authUser, record);
+        }
+
+        const promoter = promotersById.get(
+          normalizePromoterKey(record.promoterId),
+        );
+
+        return Boolean(promoter && adminCanViewAgency(authUser, promoter));
+      });
+    },
+    [authUser, canViewAllAgencies, promotersById, qrCodes],
   );
   const visibleQrCodes = useMemo(
     () =>
       sortQrCodes(
-        scopedQrCodes.filter((record) => recordMatchesSearch(record, searchTerm)),
-        groupBy,
+        scopedQrCodes.filter(
+          (record) =>
+            recordMatchesSearch(record, searchTerm) &&
+            recordMatchesDateRange(
+              record,
+              appliedFilters.startDate,
+              appliedFilters.endDate,
+            ),
+        ),
       ),
-    [groupBy, scopedQrCodes, searchTerm],
+    [appliedFilters.endDate, appliedFilters.startDate, scopedQrCodes, searchTerm],
   );
 
   const updateFilter = (field, value) => {
@@ -194,6 +233,8 @@ export default function QrCodesPage() {
       brand: draftFilters.brand.trim(),
       promoterId: draftFilters.promoterId.trim(),
       promotionCode: draftFilters.promotionCode.trim(),
+      startDate: draftFilters.startDate,
+      endDate: draftFilters.endDate,
     });
   };
 
@@ -227,19 +268,6 @@ export default function QrCodesPage() {
             value={searchTerm}
           />
 
-          <SelectInput
-            id="qrRepositoryGroupBy"
-            label="Order by"
-            value={groupBy}
-            onChange={(event) => setGroupBy(event.target.value)}
-          >
-            {GROUP_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
-
           <TextInput
             id="qrRepositoryPromotionCode"
             label="Promotion Code"
@@ -267,6 +295,22 @@ export default function QrCodesPage() {
             maxLength={5}
           />
 
+          <DateInput
+            id="qrRepositoryStartDate"
+            label="Start date"
+            value={draftFilters.startDate}
+            onValueChange={(value) => updateFilter("startDate", value)}
+            max={draftFilters.endDate || undefined}
+          />
+
+          <DateInput
+            id="qrRepositoryEndDate"
+            label="End date"
+            value={draftFilters.endDate}
+            onValueChange={(value) => updateFilter("endDate", value)}
+            min={draftFilters.startDate || undefined}
+          />
+
           <div className="qr-repository-actions">
             <button
               type="button"
@@ -279,9 +323,9 @@ export default function QrCodesPage() {
             <button
               type="submit"
               className="brand-admin-primary-btn"
-              disabled={isFetching}
+              disabled={isApplyingFilters}
             >
-              {isFetching ? "Applying..." : "Apply Filters"}
+              {isApplyingFilters ? "Applying..." : "Apply Filters"}
             </button>
           </div>
         </form>
@@ -289,17 +333,15 @@ export default function QrCodesPage() {
         <DataTable
           columns={[
             {
-              header: GROUP_OPTIONS.find((option) => option.value === groupBy)?.label,
+              header: "Date Added",
               key: "group",
               render: (record) => (
                 <div className="qr-repository-group-cell">
-                  <strong>{getGroupValue(record, groupBy)}</strong>
+                  <strong>{formatDate(record.createdAt)}</strong>
                   <span>
-                    {groupBy === "dateAdded"
-                      ? record.updatedAt
-                        ? `Updated ${formatDate(record.updatedAt)}`
-                        : "Date added"
-                      : record.promotionCode || record.promoType || "--"}
+                    {record.updatedAt
+                      ? `Updated ${formatDate(record.updatedAt)}`
+                      : "Date added"}
                   </span>
                 </div>
               ),
@@ -380,27 +422,23 @@ export default function QrCodesPage() {
                 );
               },
             },
-            ...(groupBy === "dateAdded"
-              ? []
-              : [
-                  {
-                    header: "Date Added",
-                    key: "created",
-                    render: (record) => formatDate(record.createdAt),
-                  },
-                ]),
           ]}
-          dependencies={[groupBy, searchTerm, visibleQrCodes.length]}
+          dependencies={[
+            appliedFilters.endDate,
+            appliedFilters.startDate,
+            searchTerm,
+            visibleQrCodes.length,
+          ]}
           emptyMessage={
             hasActiveFilters || searchTerm
               ? "No QR codes match these filters."
               : "No QR codes uploaded yet."
           }
-          error={error}
+          error={error || (needsPromoterAgencyLookup ? promotersError : null)}
           errorMessage="Unable to load QR codes right now."
           getRowKey={(record, index) => `${record.id}-${index}`}
-          isError={isError}
-          isLoading={isLoading}
+          isError={isError || (needsPromoterAgencyLookup && isPromotersError)}
+          isLoading={isLoading || (needsPromoterAgencyLookup && isPromotersLoading)}
           items={visibleQrCodes}
           loadingMessage="Loading QR codes..."
           tableClassName="data-table qr-repository-table"
