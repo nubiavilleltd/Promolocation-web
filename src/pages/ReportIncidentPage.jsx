@@ -2,8 +2,10 @@ import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import AppLayout from "../components/AppLayout";
-import { HELP_DESK_REQUEST_TYPES } from "../data/helpDeskMock";
+import { HELP_DESK_REQUEST_TYPES } from "../data/helpDesk";
 import { useAutoResizeTextarea } from "../hooks/use-auto-resize-textarea";
+import { useCreateIncident } from "../hooks/use-incidents";
+import { useAuthStore } from "../store/auth-store";
 import {
   validateFileSize,
   validateImageUpload,
@@ -63,7 +65,13 @@ function getMissingRequestFields({ requestType, title, description }) {
 
 function BackArrow() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      aria-hidden="true"
+    >
       <path d="M19 12H5" />
       <path d="M12 19l-7-7 7-7" />
     </svg>
@@ -77,12 +85,15 @@ export default function ReportIncidentPage() {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("Medium");
-  const [image, setImage] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
   const descriptionTextareaRef = useRef(null);
   const navigate = useNavigate();
+  const { mutateAsync: createIncidentRequest, isPending } = useCreateIncident();
+  const authUser = useAuthStore((state) => state.user);
+  const promoterId = authUser?.promoter_id || "";
+  const userId = authUser?.user_id ? String(authUser.user_id) : "";
   const selectedRequestType = HELP_DESK_REQUEST_TYPES.find(
     (type) => type.value === requestType,
   );
@@ -97,9 +108,8 @@ export default function ReportIncidentPage() {
 
   useAutoResizeTextarea(descriptionTextareaRef, description);
 
-  const resetSelectedImage = () => {
-    setImage(null);
-    setPreview(null);
+  const resetSelectedAttachments = () => {
+    setAttachments([]);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -108,41 +118,44 @@ export default function ReportIncidentPage() {
 
   const handleRequestTypeChange = (nextRequestType) => {
     if (nextRequestType !== requestType) {
-      resetSelectedImage();
+      resetSelectedAttachments();
     }
 
     setRequestType(nextRequestType);
   };
 
-  const handleImageChange = (event) => {
-    const file = event.target.files?.[0];
+  const handleAttachmentChange = (event) => {
+    const selectedFiles = Array.from(event.currentTarget.files ?? []);
 
-    if (!file) {
+    if (!selectedFiles.length) {
       return;
     }
 
-    const validationError = isIncidentReport
-      ? validateImageUpload(file)
-      : validateDocumentUpload(file);
+    const invalidAttachment = selectedFiles
+      .map((file) => ({
+        file,
+        error: isIncidentReport
+          ? validateImageUpload(file)
+          : validateDocumentUpload(file),
+      }))
+      .find(({ error }) => error);
 
-    if (validationError) {
-      resetSelectedImage();
+    if (invalidAttachment) {
+      event.currentTarget.value = "";
       Swal.fire({
         icon: "error",
         title: isIncidentReport ? "Invalid Image" : "Invalid Document",
-        text: validationError,
+        text: `${invalidAttachment.file.name}: ${invalidAttachment.error}`,
         confirmButtonColor: "#d33",
       });
       return;
     }
 
-    setImage(file);
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+    setAttachments((currentAttachments) => [
+      ...currentAttachments,
+      ...selectedFiles,
+    ]);
+    event.currentTarget.value = "";
   };
 
   const handleSubmit = async (event) => {
@@ -166,34 +179,28 @@ export default function ReportIncidentPage() {
       return;
     }
 
-    if (image) {
-      const attachmentValidationError = isIncidentReport
-        ? validateImageUpload(image)
-        : validateDocumentUpload(image);
-
-      if (attachmentValidationError) {
-        resetSelectedImage();
-        Swal.fire({
-          icon: "error",
-          title: isIncidentReport ? "Invalid Image" : "Invalid Document",
-          text: attachmentValidationError,
-          confirmButtonColor: "#d33",
-        });
-        return;
-      }
-    }
-
     setIsSubmitting(true);
 
     try {
-      await new Promise((resolve) => {
-        window.setTimeout(resolve, 500);
+      const requestTypeLabel = selectedRequestType?.label || "Incident Report";
+      const response = await createIncidentRequest({
+        userId,
+        promoterId,
+        title: trimmedTitle,
+        details: trimmedDescription,
+        requestType: requestTypeLabel,
+        priority,
+        issueLocation: location.trim() || undefined,
+        browserLink: browserLink.trim() || undefined,
+        attachments,
       });
+
+      const reference = response.incident?.title || "APP-INC-XXXXXX";
 
       await Swal.fire({
         icon: "success",
         title: "Request Submitted",
-        text: "This prototype submitted the request locally so you can review the Help Desk flow.",
+        text: `Your request has been submitted successfully. Reference: ${reference}`,
         confirmButtonColor: "#22c55e",
         confirmButtonText: "OK",
       });
@@ -227,10 +234,7 @@ export default function ReportIncidentPage() {
 
         <div className="report-header">
           <h1>New Help Desk Request</h1>
-          <p>
-            Submit incidents, change requests, access requests, and operational
-            support needs.
-          </p>
+          <p>Submit an incident report for review by the dashboard team.</p>
         </div>
 
         <div className="report-card-container">
@@ -239,8 +243,14 @@ export default function ReportIncidentPage() {
             className="report-form-premium"
             noValidate
           >
-            <div className="request-type-guide" aria-labelledby="request-type-guide-label">
-              <p className="request-type-guide-label" id="request-type-guide-label">
+            <div
+              className="request-type-guide"
+              aria-labelledby="request-type-guide-label"
+            >
+              <p
+                className="request-type-guide-label"
+                id="request-type-guide-label"
+              >
                 Request type guide
               </p>
               <div className="request-type-guide-grid">
@@ -343,34 +353,12 @@ export default function ReportIncidentPage() {
             </div>
 
             <div className="input-field-group report-attachment-field">
-              <label>Attachment</label>
+              <label>Attachment(s)</label>
               <div
-                className={`premium-upload-zone ${preview ? "has-image" : ""} ${image && !preview ? "has-file" : ""}`}
-                onClick={() =>
-                  !isSubmitting && fileInputRef.current.click()
-                }
+                className={`premium-upload-zone ${attachments.length ? "has-file" : ""}`}
+                onClick={() => !isSubmitting && fileInputRef.current.click()}
               >
-                {preview ? (
-                  <>
-                    <img
-                      src={preview}
-                      alt="Request attachment preview"
-                      className="evidence-preview-img"
-                    />
-                    <div className="upload-overlay">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                        <circle cx="12" cy="13" r="4" />
-                      </svg>
-                      <span>Change Attachment</span>
-                    </div>
-                  </>
-                ) : image ? (
+                {attachments.length ? (
                   <div className="upload-file-state">
                     <div className="upload-icon-circle">
                       <svg
@@ -385,8 +373,33 @@ export default function ReportIncidentPage() {
                         <line x1="8" y1="17" x2="16" y2="17" />
                       </svg>
                     </div>
-                    <p className="upload-prompt">{image.name}</p>
-                    <p className="upload-subtext">Tap to replace document</p>
+                    <p className="upload-prompt">
+                      {attachments.length}{" "}
+                      {attachments.length === 1 ? "file" : "files"} selected
+                    </p>
+                    <ul className="upload-file-list">
+                      {attachments.map((file, index) => (
+                        <li key={`${file.name}-${file.lastModified}-${index}`}>
+                          <span title={file.name}>{file.name}</span>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${file.name}`}
+                            disabled={isSubmitting}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setAttachments((currentAttachments) =>
+                                currentAttachments.filter(
+                                  (_, fileIndex) => fileIndex !== index,
+                                ),
+                              );
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="upload-subtext">Tap to add more files</p>
                   </div>
                 ) : (
                   <div className="upload-empty-state">
@@ -409,8 +422,9 @@ export default function ReportIncidentPage() {
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={handleImageChange}
+                  onChange={handleAttachmentChange}
                   accept={attachmentAccept}
+                  multiple
                   style={{ display: "none" }}
                 />
               </div>
@@ -451,7 +465,7 @@ export default function ReportIncidentPage() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .report-page-wrapper {
           width: 100%;
           display: flex;
@@ -689,6 +703,41 @@ export default function ReportIncidentPage() {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .upload-file-list {
+          width: min(100%, 360px);
+          max-height: 88px;
+          overflow-y: auto;
+          list-style: none;
+          margin: 8px 0;
+          padding: 0;
+        }
+
+        .upload-file-list li {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 4px 2px;
+          font-size: 12px;
+          text-align: left;
+        }
+
+        .upload-file-list li span {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .upload-file-list li button {
+          flex: none;
+          border: 0;
+          background: transparent;
+          color: #b42318;
+          cursor: pointer;
+          font-size: 12px;
         }
 
         .upload-icon-circle {

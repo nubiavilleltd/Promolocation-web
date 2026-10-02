@@ -10,7 +10,7 @@ export function useIncidentAuditTrail(incident) {
 
   return useQuery({
     queryKey: getIncidentAuditTrailQueryKey(incidentId),
-    queryFn: () => getIncidentAuditTrail(incidentId),
+    queryFn: () => getIncidentAuditTrail({ incidentId }),
     enabled: Boolean(incidentId),
     initialData: [],
   });

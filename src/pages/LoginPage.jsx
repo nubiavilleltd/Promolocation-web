@@ -8,7 +8,10 @@ import { useAuth } from "../context/AuthContext";
 import { useLogin } from "../hooks/useLogin";
 import { getDefaultAuthorizedPath, isAdminUser } from "../utils/authAccess";
 import { assetPath } from "../utils/assetPath";
-import { DASHBOARD_TEAM_LABEL, REGULAR_ADMIN_TEAM_LABEL } from "../utils/uiLabels";
+import {
+  DASHBOARD_TEAM_LABEL,
+  REGULAR_ADMIN_TEAM_LABEL,
+} from "../utils/uiLabels";
 
 function getLoginErrorMessage(status) {
   switch (status) {
@@ -162,7 +165,6 @@ export default function LoginPage() {
             {isPending ? "Logging in..." : "Login"}
           </button>
         </form>
-
       </div>
     </div>
   );

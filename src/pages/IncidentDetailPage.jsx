@@ -4,16 +4,20 @@ import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import AppLayout from "../components/AppLayout";
 import DataTable from "../components/DataTable";
-import { getHelpDeskRequestById } from "../data/helpDeskMock";
+import { useIncidentAuditTrail } from "../hooks/use-incident-audit-trail";
+import { useIncidents, useUpdateIncident } from "../hooks/use-incidents";
 import { useAutoResizeTextarea } from "../hooks/use-auto-resize-textarea";
 import { useAuthStore } from "../store/auth-store";
 import { isSpecialAdminUser } from "../utils/authAccess";
 import { assetPath } from "../utils/assetPath";
 import { formatLongDate, getIncidentStatusColor } from "../utils/formatters";
-import { REGULAR_ADMIN_TEAM_LABEL, SPECIAL_ADMIN_TEAM_LABEL } from "../utils/uiLabels";
+import {
+  REGULAR_ADMIN_TEAM_LABEL,
+  SPECIAL_ADMIN_TEAM_LABEL,
+} from "../utils/uiLabels";
 
 const ADMIN_REQUEST_ACTIONS = {
-  Submitted: ["In Progress", "On Hold", "Resolved"],
+  Pending: ["In Progress", "On Hold", "Resolved"],
   "In Progress": ["In Progress", "On Hold", "Resolved"],
   "On Hold": ["In Progress", "On Hold", "Resolved"],
   "Not Resolved": ["In Progress", "On Hold", "Resolved"],
@@ -38,7 +42,7 @@ function getAvailableRequestStatusOptions(currentStatus, isSpecialAdmin) {
 function getRequestActionHelperCopy(currentStatus, isSpecialAdmin) {
   if (isSpecialAdmin) {
     switch (currentStatus) {
-      case "Submitted":
+      case "Pending":
         return `This request is waiting for ${REGULAR_ADMIN_TEAM_LABEL} review. You can act after ${REGULAR_ADMIN_TEAM_LABEL} resolves it.`;
       case "In Progress":
         return `${REGULAR_ADMIN_TEAM_LABEL} is currently working on this request. You cannot update it right now.`;
@@ -56,7 +60,7 @@ function getRequestActionHelperCopy(currentStatus, isSpecialAdmin) {
   }
 
   switch (currentStatus) {
-    case "Submitted":
+    case "Pending":
       return "This request has just been submitted. Move it into progress, place it on hold, or resolve it.";
     case "In Progress":
       return "Continue working the request, place it on hold, keep it in progress, or mark it resolved when the work has been handled.";
@@ -91,7 +95,12 @@ function formatStatusOptionsList(statusOptions) {
 
 function BackArrow() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
       <path d="M19 12H5" />
       <path d="M12 19l-7-7 7-7" />
     </svg>
@@ -103,12 +112,14 @@ export default function IncidentDetailPage() {
   const [adminNote, setAdminNote] = useState("");
   const adminCommentTextareaRef = useRef(null);
   const { incidentId } = useParams();
-  const [request, setRequest] = useState(() => getHelpDeskRequestById(incidentId));
-  const [auditTrail, setAuditTrail] = useState(() => request?.auditTrail || []);
-  const [isUpdatingRequest, setIsUpdatingRequest] = useState(false);
   const authUser = useAuthStore((state) => state.user);
   const authUserId = authUser?.user_id;
   const navigate = useNavigate();
+  const { data: incidents = [] } = useIncidents();
+  const { data: auditTrail = [] } = useIncidentAuditTrail({ id: incidentId });
+  const { mutateAsync: updateIncidentRequest, isPending: isUpdatingRequest } =
+    useUpdateIncident();
+  const request = incidents.find((incident) => incident.id === incidentId);
   const statusColor = getIncidentStatusColor(request?.status);
   const isSpecialAdmin = isSpecialAdminUser(authUser);
   const availableStatusOptions = getAvailableRequestStatusOptions(
@@ -121,7 +132,9 @@ export default function IncidentDetailPage() {
     request?.status,
     isSpecialAdmin,
   );
-  const requestActionTitle = isSpecialAdmin ? "Requester Review" : "Request Action";
+  const requestActionTitle = isSpecialAdmin
+    ? "Requester Review"
+    : "Request Action";
 
   useAutoResizeTextarea(adminCommentTextareaRef, adminNote);
 
@@ -140,15 +153,19 @@ export default function IncidentDetailPage() {
     return (
       <AppLayout activeNav="incidents" mainContentClassName="detail-main">
         <div className="detail-wrapper">
-          <button type="button" className="back-btn" onClick={() => navigate("/incidents")}>
+          <button
+            type="button"
+            className="back-btn"
+            onClick={() => navigate("/incidents")}
+          >
             <BackArrow />
             Back to Help Desk
           </button>
           <div className="incident-card">
             <h1 className="page-title">Request Details</h1>
             <p className="detail-empty-copy">
-              We couldn't find that request anymore. It may have been removed or the
-              link is no longer valid.
+              We couldn't find that request anymore. It may have been removed or
+              the link is no longer valid.
             </p>
           </div>
         </div>
@@ -182,7 +199,11 @@ export default function IncidentDetailPage() {
       return;
     }
 
-    if (isSpecialAdmin && selectedStatus === "Not Resolved" && !trimmedAdminNote) {
+    if (
+      isSpecialAdmin &&
+      selectedStatus === "Not Resolved" &&
+      !trimmedAdminNote
+    ) {
       Swal.fire({
         icon: "error",
         title: "Comment Required",
@@ -193,41 +214,18 @@ export default function IncidentDetailPage() {
     }
 
     try {
-      setIsUpdatingRequest(true);
-      const actionLabel =
-        selectedStatus === "Closed"
-          ? "Closed request"
-          : selectedStatus === "Not Resolved"
-            ? "Marked request Not Resolved"
-            : `Marked request ${selectedStatus}`;
-
-      setRequest((currentRequest) => ({
-        ...currentRequest,
+      await updateIncidentRequest({
+        incidentId: request.id,
         status: selectedStatus,
-        adminNote: trimmedAdminNote || currentRequest.adminNote,
-        resolutionSummary:
-          selectedStatus === "Resolved"
-            ? trimmedAdminNote || currentRequest.resolutionSummary
-            : currentRequest.resolutionSummary,
-      }));
-      setAuditTrail((currentTrail) => [
-        {
-          id: `AUD-${Date.now()}`,
-          userId: authUserId ? String(authUserId) : "mock-user",
-          action: actionLabel,
-          comment: trimmedAdminNote || null,
-          dateTime: new Date().toISOString(),
-        },
-        ...currentTrail,
-      ]);
+        comment: trimmedAdminNote || undefined,
+      });
 
       await Swal.fire({
         title: "Request Updated",
-        text: "This prototype updated the request locally so you can review the flow.",
+        text: "The request status has been updated successfully.",
         icon: "success",
         confirmButtonColor: "#0E2B63",
       });
-
     } catch (updateError) {
       await Swal.fire({
         title: "Unable to Update Request",
@@ -235,15 +233,17 @@ export default function IncidentDetailPage() {
         icon: "error",
         confirmButtonColor: "#d33",
       });
-    } finally {
-      setIsUpdatingRequest(false);
     }
   };
 
   return (
     <AppLayout activeNav="incidents" mainContentClassName="detail-main">
       <div className="detail-wrapper">
-        <button type="button" className="back-btn" onClick={() => navigate("/incidents")}>
+        <button
+          type="button"
+          className="back-btn"
+          onClick={() => navigate("/incidents")}
+        >
           <BackArrow />
           Back to Requests
         </button>
@@ -253,7 +253,7 @@ export default function IncidentDetailPage() {
             <span className="detail-overline">REQUEST TITLE</span>
             <h1 className="page-title">{request.issue}</h1>
             <p className="detail-heading-meta">
-              <span>{request.id}</span>
+              <span>{request.title || request.id}</span>
             </p>
           </div>
           <span
@@ -263,7 +263,10 @@ export default function IncidentDetailPage() {
               backgroundColor: `${statusColor}14`,
             }}
           >
-            <span className="detail-status-dot" style={{ backgroundColor: statusColor }} />
+            <span
+              className="detail-status-dot"
+              style={{ backgroundColor: statusColor }}
+            />
             {request.status || "Unknown"}
           </span>
         </div>
@@ -279,11 +282,11 @@ export default function IncidentDetailPage() {
             <div className="detail-meta-grid detail-submitted-meta-grid">
               <div className="detail-meta-item">
                 <span>Request type</span>
-                <strong>{request.requestTypeLabel || "—"}</strong>
+                <strong>{request.requestType || "—"}</strong>
               </div>
               <div className="detail-meta-item">
                 <span>Requester</span>
-                <strong>{request.requesterName || "—"}</strong>
+                <strong>{request.reporterName || "—"}</strong>
               </div>
               <div className="detail-meta-item">
                 <span>Priority</span>
@@ -307,8 +310,10 @@ export default function IncidentDetailPage() {
                 </div>
               </div>
               <div className="detail-content-block">
-                <h3>Attachment</h3>
-                <div className={`detail-attachment-box${attachmentSource ? " has-attachment" : ""}`}>
+                <h3>Attachment(s)</h3>
+                <div
+                  className={`detail-attachment-box${attachmentSource ? " has-attachment" : ""}`}
+                >
                   {attachmentSource ? (
                     <img
                       src={attachmentSource}
@@ -322,7 +327,7 @@ export default function IncidentDetailPage() {
             </div>
           </section>
 
-          {request.resolutionSummary ? (
+          {request.adminNote ? (
             <section className="detail-section">
               <div className="detail-section-heading">
                 <div>
@@ -331,9 +336,11 @@ export default function IncidentDetailPage() {
                 </div>
               </div>
               <div className="resolution-box">
-                <span className="resolution-check" aria-hidden="true">✓</span>
+                <span className="resolution-check" aria-hidden="true">
+                  ✓
+                </span>
                 <div className="description-box">
-                  <p>{request.resolutionSummary}</p>
+                  <p>{request.adminNote}</p>
                 </div>
               </div>
             </section>
@@ -347,12 +354,18 @@ export default function IncidentDetailPage() {
               </div>
             </div>
             <p className="detail-helper-copy">{requestActionHelperCopy}</p>
-            <form className="incident-action-form" onSubmit={handleStatusUpdate} noValidate>
+            <form
+              className="incident-action-form"
+              onSubmit={handleStatusUpdate}
+              noValidate
+            >
               <div className="incident-action-grid">
                 <div className="incident-input-group">
                   <label htmlFor="incidentStatus">
                     Update Status
-                    {canUpdateRequest ? <span className="required-mark">*</span> : null}
+                    {canUpdateRequest ? (
+                      <span className="required-mark">*</span>
+                    ) : null}
                   </label>
                   <select
                     id="incidentStatus"
@@ -361,7 +374,9 @@ export default function IncidentDetailPage() {
                     onChange={(event) => setSelectedStatus(event.target.value)}
                   >
                     <option value="" disabled>
-                      {canUpdateRequest ? "Select status" : "No actions available"}
+                      {canUpdateRequest
+                        ? "Select status"
+                        : "No actions available"}
                     </option>
                     {availableStatusOptions.map((statusOption) => (
                       <option key={statusOption} value={statusOption}>
@@ -374,7 +389,9 @@ export default function IncidentDetailPage() {
                 <div className="incident-input-group incident-comment-group">
                   <label htmlFor="adminComment">
                     Comment
-                    {isCommentRequired ? <span className="required-mark">*</span> : null}
+                    {isCommentRequired ? (
+                      <span className="required-mark">*</span>
+                    ) : null}
                   </label>
                   <textarea
                     id="adminComment"
@@ -396,7 +413,9 @@ export default function IncidentDetailPage() {
                 <button
                   type="submit"
                   className="resolve-btn"
-                  disabled={isUpdatingRequest || !canUpdateRequest || !selectedStatus}
+                  disabled={
+                    isUpdatingRequest || !canUpdateRequest || !selectedStatus
+                  }
                 >
                   {isUpdatingRequest
                     ? "Saving..."
@@ -416,15 +435,20 @@ export default function IncidentDetailPage() {
               </div>
             </div>
             <p className="audit-trail-copy">
-              Every request action is recorded here so the full review history stays visible.
+              Every request action is recorded here so the full review history
+              stays visible.
             </p>
 
             <DataTable
               columns={[
                 {
-                  header: "User ID",
-                  key: "userId",
-                  render: (auditEntry) => auditEntry.userId,
+                  header: "Acted By",
+                  key: "actor",
+                  render: (auditEntry) =>
+                    auditEntry.userName ||
+                    (String(auditEntry.userId) === String(authUserId)
+                      ? authUser?.fullname || "--"
+                      : "--"),
                 },
                 {
                   header: "Action",

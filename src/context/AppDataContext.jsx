@@ -1,6 +1,6 @@
 import React from "react";
-import { createContext, useContext } from "react";
-import { defaultIncidents, defaultPromoters } from "../data/seed";
+import { createContext, useContext, useEffect } from "react";
+import { defaultPromoters } from "../data/seed";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
 
 const AppDataContext = createContext(null);
@@ -10,10 +10,9 @@ export function AppDataProvider({ children }) {
     "promolocationPromoters",
     defaultPromoters,
   );
-  const [incidents, setIncidents] = useLocalStorageState(
-    "promolocationIncidents",
-    defaultIncidents,
-  );
+  useEffect(() => {
+    window.localStorage.removeItem("promolocationIncidents");
+  }, []);
 
   const addPromoter = (promoter) => {
     setPromoters((currentPromoters) => [...currentPromoters, promoter]);
@@ -27,22 +26,12 @@ export function AppDataProvider({ children }) {
     );
   };
 
-  const updateIncidentStatus = (userId, status) => {
-    setIncidents((currentIncidents) =>
-      currentIncidents.map((incident) =>
-        incident.userId === userId ? { ...incident, status } : incident,
-      ),
-    );
-  };
-
   return (
     <AppDataContext.Provider
       value={{
         promoters,
-        incidents,
         addPromoter,
         updatePromoterStatus,
-        updateIncidentStatus,
       }}
     >
       {children}

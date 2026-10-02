@@ -118,23 +118,40 @@ function normalizeIncidentStatus(status: string): Incident["status"] {
 
 export function mapIncident(incident: RawIncident): Incident {
   return {
-    id: incident.incident_id,
+    id: String(incident.incident_id),
+    title: incident.title || null,
     promoterId: incident.promoter_id,
-    userId: incident.user_id,
+    userId: String(incident.user_id),
     issue: incident.incident_name,
     category: incident.issue_category,
+    requestType: incident.request_type || "Incident Report",
+    priority: incident.priority || "Medium",
     description: incident.description,
     status: normalizeIncidentStatus(incident.status),
     date: normalizeIncidentDate(incident.created_at),
+    updatedAt: incident.updated_at
+      ? normalizeIncidentDate(incident.updated_at)
+      : null,
     image: incident.photo,
     adminNote: incident.admin_note,
+    issueLocation: incident.issue_location || null,
+    browserLink: incident.browser_link || null,
+    agency: incident.agency || null,
+    relatedAgency: incident.related_agency || null,
+    reporterName: incident.reporter_name || null,
+    reporterEmail: incident.reporter_email || null,
+    reporterPhone: incident.reporter_phone || null,
   };
 }
 
-export function mapIncidentAuditEntry(entry: RawIncidentAuditEntry): IncidentAuditEntry {
+export function mapIncidentAuditEntry(
+  entry: RawIncidentAuditEntry,
+): IncidentAuditEntry {
   return {
     id: String(entry.audit_id),
     incidentId: String(entry.incident_id),
+    title: entry.title || null,
+    userName: entry.user_name || null,
     userId: String(entry.user_id),
     incidentTitle: entry.incident_title,
     action: entry.action,

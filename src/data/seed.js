@@ -44,39 +44,3 @@ export const defaultPromoters = [
   { userId: "12372", status: "Inactive" },
   { userId: "12373", status: "Active" },
 ];
-
-export const defaultIncidents = [
-  {
-    userId: "PRM001",
-    image: "assets/test1.png",
-    issue: "Late Arrival",
-    description: "Arrived 2 hours late to assigned promotional duty.",
-    date: "2026-02-10",
-    status: "Pending",
-  },
-  {
-    userId: "PRM002",
-    image: "assets/test2.png",
-    issue: "Uniform Violation",
-    description: "Not dressed according to company uniform policy.",
-    date: "2026-02-11",
-    status: "In Progress",
-  },
-  {
-    userId: "PRM003",
-    image: "assets/test1.png",
-    issue: "Customer Complaint",
-    description: "Customer reported unprofessional behavior during engagement.",
-    date: "2026-02-12",
-    status: "Resolved",
-  },
-  {
-    userId: "PRM004",
-    image: "assets/test3.png",
-    issue: "Absenteeism",
-    description: "Absent from assigned duty without prior notice.",
-    date: "2026-02-13",
-    status: "Closed",
-  },
-];
-

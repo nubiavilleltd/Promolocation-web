@@ -4,15 +4,13 @@ import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import DataTable from "../components/DataTable";
 import SearchBar from "../components/SearchBar";
-import {
-  HELP_DESK_REQUEST_TYPES,
-  mockHelpDeskRequests,
-} from "../data/helpDeskMock";
+import { HELP_DESK_REQUEST_TYPES } from "../data/helpDesk";
+import { useIncidents } from "../hooks/use-incidents";
 import { useAuthStore } from "../store/auth-store";
 import { isSpecialAdminUser } from "../utils/authAccess";
 import { formatLongDate, getIncidentStatusColor } from "../utils/formatters";
 
-const STATUS_FILTERS = ["all", "Submitted", "In Progress", "Resolved", "Closed"];
+const STATUS_FILTERS = ["all", "Pending", "In Progress", "Resolved", "Closed"];
 
 const REQUEST_TYPE_COLORS = {
   incident_report: "#d97706",
@@ -20,9 +18,37 @@ const REQUEST_TYPE_COLORS = {
   access_request: "#159447",
 };
 
+function normalizeRequestType(requestType) {
+  const normalizedType = String(requestType || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+  if (normalizedType === "incident" || normalizedType === "incident_report") {
+    return "incident_report";
+  }
+
+  return normalizedType;
+}
+
+function getRequestTypeLabel(requestType) {
+  const normalizedType = normalizeRequestType(requestType);
+
+  return (
+    HELP_DESK_REQUEST_TYPES.find((type) => type.value === normalizedType)
+      ?.label || requestType
+  );
+}
+
 function PlusIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      aria-hidden="true"
+    >
       <path d="M12 5v14M5 12h14" />
     </svg>
   );
@@ -31,7 +57,13 @@ function PlusIcon() {
 function SummaryIcon({ type }) {
   if (type === "awaiting") {
     return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        aria-hidden="true"
+      >
         <rect x="4" y="5" width="16" height="15" rx="2" />
         <path d="M8 3v4M16 3v4M4 10h16" />
         <circle cx="16.5" cy="16" r="3.5" />
@@ -42,7 +74,13 @@ function SummaryIcon({ type }) {
 
   if (type === "progress") {
     return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        aria-hidden="true"
+      >
         <path d="M4 19V5M4 19h16" />
         <path d="m7 15 4-4 3 2 5-6" />
         <path d="M15 7h4v4" />
@@ -52,7 +90,13 @@ function SummaryIcon({ type }) {
 
   if (type === "resolved") {
     return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        aria-hidden="true"
+      >
         <circle cx="12" cy="12" r="8" />
         <path d="m8.5 12 2.3 2.3 4.8-5" />
       </svg>
@@ -61,14 +105,26 @@ function SummaryIcon({ type }) {
 
   if (type === "closed") {
     return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        aria-hidden="true"
+      >
         <path d="M4 8h16v11H4zM3 5h18v3H3zM9 12h6" />
       </svg>
     );
   }
 
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      aria-hidden="true"
+    >
       <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
       <path d="m4 7.5 8 4.5 8-4.5M12 12v9" />
     </svg>
@@ -82,54 +138,59 @@ export default function IncidentHistoryPage() {
   const authUser = useAuthStore((state) => state.user);
   const canCreateRequest = isSpecialAdminUser(authUser);
   const navigate = useNavigate();
+  const { data: incidents = [], isLoading, isError, error } = useIncidents();
 
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
   const filteredRequests = useMemo(
     () =>
-      mockHelpDeskRequests.filter((request) => {
+      incidents.filter((request) => {
         const matchesSearch = [
           request.id,
           request.issue,
           request.category,
           request.status,
-          request.requestTypeLabel,
-          request.requesterName,
+          request.requestType,
+          request.reporterName,
           request.priority,
+          request.title,
         ]
+          .filter(Boolean)
           .join(" ")
           .toLowerCase()
           .includes(normalizedSearchTerm);
         const matchesType =
-          requestType === "all" || request.requestType === requestType;
+          requestType === "all" ||
+          normalizeRequestType(request.requestType) === requestType;
         const matchesStatus = status === "all" || request.status === status;
 
         return matchesSearch && matchesType && matchesStatus;
       }),
-    [normalizedSearchTerm, requestType, status],
+    [incidents, normalizedSearchTerm, requestType, status],
   );
   const requestSummary = useMemo(
     () =>
-      mockHelpDeskRequests.reduce(
+      incidents.reduce(
         (summary, request) => ({
           ...summary,
           [request.status]: (summary[request.status] || 0) + 1,
         }),
         {},
       ),
-    [],
+    [incidents],
   );
   const actionRequiredCount = canCreateRequest
     ? requestSummary.Resolved || 0
-    : (requestSummary.Submitted || 0) + (requestSummary["Not Resolved"] || 0);
-  const hasActiveFilters = requestType !== "all" || status !== "all" || Boolean(searchTerm);
+    : (requestSummary.Pending || 0) + (requestSummary["Not Resolved"] || 0);
+  const hasActiveFilters =
+    requestType !== "all" || status !== "all" || Boolean(searchTerm);
   const resultCountLabel =
-    hasActiveFilters && filteredRequests.length !== mockHelpDeskRequests.length
+    hasActiveFilters && filteredRequests.length !== incidents.length
       ? `${filteredRequests.length} ${filteredRequests.length === 1 ? "result" : "results"}`
       : null;
   const summaryItems = [
     {
       label: "All Requests",
-      count: mockHelpDeskRequests.length,
+      count: incidents.length,
       detail: "Total",
       icon: "all",
       color: "blue",
@@ -164,13 +225,55 @@ export default function IncidentHistoryPage() {
     },
   ];
 
+  if (isLoading) {
+    return (
+      <AppLayout
+        activeNav="incidents"
+        mainContentClassName="promoters-main requests-main"
+      >
+        <div className="requests-page">
+          <div className="requests-page-header">
+            <div>
+              <h1>All Requests</h1>
+              <p>Loading help desk requests...</p>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (isError) {
+    return (
+      <AppLayout
+        activeNav="incidents"
+        mainContentClassName="promoters-main requests-main"
+      >
+        <div className="requests-page">
+          <div className="requests-page-header">
+            <div>
+              <h1>All Requests</h1>
+              <p>Error loading requests: {error?.message || "Unknown error"}</p>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
-    <AppLayout activeNav="incidents" mainContentClassName="promoters-main requests-main">
+    <AppLayout
+      activeNav="incidents"
+      mainContentClassName="promoters-main requests-main"
+    >
       <div className="requests-page">
         <div className="requests-page-header">
           <div>
             <h1>All Requests</h1>
-            <p>Review incidents, change requests, access requests, and follow-up decisions.</p>
+            <p>
+              Review incidents, change requests, access requests, and follow-up
+              decisions.
+            </p>
           </div>
           {canCreateRequest ? (
             <button
@@ -214,12 +317,14 @@ export default function IncidentHistoryPage() {
                   key={statusOption}
                   className={`requests-filter-chip${status === statusOption ? " is-selected" : ""}`}
                   onClick={() => setStatus(statusOption)}
-                  style={isAllFilter ? undefined : { "--chip-color": statusColor }}
+                  style={
+                    isAllFilter ? undefined : { "--chip-color": statusColor }
+                  }
                 >
                   <span>{isAllFilter ? "All" : statusOption}</span>
                   <strong>
                     {isAllFilter
-                      ? mockHelpDeskRequests.length
+                      ? incidents.length
                       : requestSummary[statusOption] || 0}
                   </strong>
                 </button>
@@ -237,7 +342,10 @@ export default function IncidentHistoryPage() {
 
           <label className="requests-type-filter">
             <span>Request Type</span>
-            <select value={requestType} onChange={(event) => setRequestType(event.target.value)}>
+            <select
+              value={requestType}
+              onChange={(event) => setRequestType(event.target.value)}
+            >
               <option value="all">All types</option>
               {HELP_DESK_REQUEST_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -247,7 +355,9 @@ export default function IncidentHistoryPage() {
             </select>
           </label>
 
-          {resultCountLabel ? <span className="requests-result-count">{resultCountLabel}</span> : null}
+          {resultCountLabel ? (
+            <span className="requests-result-count">{resultCountLabel}</span>
+          ) : null}
         </div>
 
         <DataTable
@@ -261,7 +371,7 @@ export default function IncidentHistoryPage() {
                 <div className="requests-request-cell">
                   <strong title={request.issue}>{request.issue}</strong>
                   <span title={`${request.id} · ${request.category}`}>
-                    {request.id} · {request.category}
+                    {request.title || request.id} · {request.category}
                   </span>
                 </div>
               ),
@@ -276,10 +386,13 @@ export default function IncidentHistoryPage() {
                   <span
                     className="requests-type-dot"
                     style={{
-                      backgroundColor: REQUEST_TYPE_COLORS[request.requestType] || "#64748b",
+                      backgroundColor:
+                        REQUEST_TYPE_COLORS[
+                          normalizeRequestType(request.requestType)
+                        ] || "#64748b",
                     }}
                   />
-                  {request.requestTypeLabel}
+                  {getRequestTypeLabel(request.requestType)}
                 </span>
               ),
             },
@@ -290,7 +403,9 @@ export default function IncidentHistoryPage() {
               cellClassName: "help-desk-requester-col",
               render: (request) => (
                 <div className="requests-requester-cell">
-                  <strong title={request.requesterName}>{request.requesterName}</strong>
+                  <strong title={request.reporterName}>
+                    {request.reporterName || "—"}
+                  </strong>
                 </div>
               ),
             },
@@ -300,7 +415,9 @@ export default function IncidentHistoryPage() {
               headerClassName: "help-desk-date-col",
               cellClassName: "help-desk-date-col",
               render: (request) => (
-                <span className="help-desk-relative-time">{formatLongDate(request.date)}</span>
+                <span className="help-desk-relative-time">
+                  {formatLongDate(request.date)}
+                </span>
               ),
             },
             {
@@ -318,20 +435,31 @@ export default function IncidentHistoryPage() {
                 >
                   <span
                     className="help-desk-status-dot"
-                    style={{ backgroundColor: getIncidentStatusColor(request.status) }}
+                    style={{
+                      backgroundColor: getIncidentStatusColor(request.status),
+                    }}
                   />
                   {request.status}
                 </span>
               ),
             },
           ]}
-          dependencies={[searchTerm, requestType, status, filteredRequests.length]}
+          dependencies={[
+            searchTerm,
+            requestType,
+            status,
+            filteredRequests.length,
+          ]}
           emptyMessage="No help desk requests match your filters."
           getRowKey={(request) => request.id}
           items={filteredRequests}
           footerContent={({ currentPage, pageSize, paginatedItems }) => {
-            const start = filteredRequests.length ? currentPage * pageSize + 1 : 0;
-            const end = filteredRequests.length ? start + paginatedItems.length - 1 : 0;
+            const start = filteredRequests.length
+              ? currentPage * pageSize + 1
+              : 0;
+            const end = filteredRequests.length
+              ? start + paginatedItems.length - 1
+              : 0;
 
             return (
               <span className="requests-table-count">

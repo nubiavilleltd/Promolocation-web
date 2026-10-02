@@ -25,7 +25,10 @@ export function login(payload: LoginPayload) {
 }
 
 export function changePassword(payload: ChangePasswordPayload) {
-  return authenticatedAdminPost<ChangePasswordResponse>(CHANGE_PASSWORD_PATH, payload);
+  return authenticatedAdminPost<ChangePasswordResponse>(
+    CHANGE_PASSWORD_PATH,
+    payload,
+  );
 }
 
 export function forgotPassword(payload: ForgotPasswordPayload) {
