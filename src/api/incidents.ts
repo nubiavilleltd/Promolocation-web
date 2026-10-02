@@ -102,6 +102,8 @@ export async function getIncidentAuditTrail(
     );
   }
 
+  console.log("[getIncidentAuditTrail] response", response);
+
   return response.audit_trail
     .map(mapIncidentAuditEntry)
     .sort((leftEntry, rightEntry) => {

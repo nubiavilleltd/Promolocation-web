@@ -447,8 +447,8 @@ export default function IncidentDetailPage() {
                   render: (auditEntry) =>
                     auditEntry.userName ||
                     (String(auditEntry.userId) === String(authUserId)
-                      ? authUser?.fullname || "--"
-                      : "--"),
+                      ? authUser?.fullname || auditEntry.user_name
+                      : auditEntry.user_name),
                 },
                 {
                   header: "Action",

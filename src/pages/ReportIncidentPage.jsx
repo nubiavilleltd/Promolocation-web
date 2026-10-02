@@ -6,44 +6,9 @@ import { HELP_DESK_REQUEST_TYPES } from "../data/helpDesk";
 import { useAutoResizeTextarea } from "../hooks/use-auto-resize-textarea";
 import { useCreateIncident } from "../hooks/use-incidents";
 import { useAuthStore } from "../store/auth-store";
-import {
-  validateFileSize,
-  validateImageUpload,
-} from "../utils/imageUploadValidation";
+import { validateFileSize } from "../utils/imageUploadValidation";
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
-const DOCUMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt";
-const DOCUMENT_EXTENSIONS = ["pdf", "doc", "docx", "xls", "xlsx", "csv", "txt"];
-const DOCUMENT_MIME_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/csv",
-  "text/plain",
-];
-
-function validateDocumentUpload(file) {
-  if (!file) {
-    return null;
-  }
-
-  const normalizedMimeType =
-    typeof file.type === "string" ? file.type.toLowerCase() : "";
-  const normalizedFileName =
-    typeof file.name === "string" ? file.name.toLowerCase() : "";
-  const hasAllowedExtension = DOCUMENT_EXTENSIONS.some((extension) =>
-    normalizedFileName.endsWith(`.${extension}`),
-  );
-  const hasAllowedMimeType = DOCUMENT_MIME_TYPES.includes(normalizedMimeType);
-
-  if (!hasAllowedExtension && !hasAllowedMimeType) {
-    return "Only PDF, Word, Excel, CSV, or text documents are allowed for this request.";
-  }
-
-  return validateFileSize(file, "Document");
-}
 
 function getMissingRequestFields({ requestType, title, description }) {
   const missingFields = [];
@@ -79,12 +44,12 @@ function BackArrow() {
 }
 
 export default function ReportIncidentPage() {
-  const [requestType, setRequestType] = useState("incident_report");
+  const [requestType, setRequestType] = useState("");
   const [title, setTitle] = useState("");
   const [browserLink, setBrowserLink] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("Medium");
+  const [priority, setPriority] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
@@ -97,14 +62,8 @@ export default function ReportIncidentPage() {
   const selectedRequestType = HELP_DESK_REQUEST_TYPES.find(
     (type) => type.value === requestType,
   );
-  const isIncidentReport = requestType === "incident_report";
-  const attachmentAccept = isIncidentReport ? "image/*" : DOCUMENT_ACCEPT;
-  const attachmentPrompt = isIncidentReport
-    ? "Tap to upload incident image"
-    : "Tap to upload supporting document";
-  const attachmentSubtext = isIncidentReport
-    ? "JPG, PNG or WEBP (Max 3MB)"
-    : "PDF, DOCX, XLSX, CSV or TXT (Max 3MB)";
+  const attachmentPrompt = "Tap to upload files";
+  const attachmentSubtext = "Any file type (Max 3MB per file)";
 
   useAutoResizeTextarea(descriptionTextareaRef, description);
 
@@ -134,9 +93,7 @@ export default function ReportIncidentPage() {
     const invalidAttachment = selectedFiles
       .map((file) => ({
         file,
-        error: isIncidentReport
-          ? validateImageUpload(file)
-          : validateDocumentUpload(file),
+        error: validateFileSize(file, "Attachment"),
       }))
       .find(({ error }) => error);
 
@@ -144,7 +101,7 @@ export default function ReportIncidentPage() {
       event.currentTarget.value = "";
       Swal.fire({
         icon: "error",
-        title: isIncidentReport ? "Invalid Image" : "Invalid Document",
+        title: "Attachment Too Large",
         text: `${invalidAttachment.file.name}: ${invalidAttachment.error}`,
         confirmButtonColor: "#d33",
       });
@@ -322,6 +279,9 @@ export default function ReportIncidentPage() {
                   disabled={isSubmitting}
                   className="premium-input-field"
                 >
+                  <option value="" disabled>
+                    Select priority
+                  </option>
                   {PRIORITY_OPTIONS.map((priorityOption) => (
                     <option key={priorityOption} value={priorityOption}>
                       {priorityOption}
@@ -343,6 +303,9 @@ export default function ReportIncidentPage() {
                   disabled={isSubmitting}
                   className="premium-input-field"
                 >
+                  <option value="" disabled>
+                    Select request type
+                  </option>
                   {HELP_DESK_REQUEST_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
                       {type.label}
@@ -423,7 +386,7 @@ export default function ReportIncidentPage() {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleAttachmentChange}
-                  accept={attachmentAccept}
+                  accept="*/*"
                   multiple
                   style={{ display: "none" }}
                 />
