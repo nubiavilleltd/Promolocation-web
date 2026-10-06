@@ -11,6 +11,7 @@ export type RawIncident = {
   created_at: string;
   updated_at: string | null;
   photo: string | null;
+  attachments?: string[] | null;
   promoter_id: string;
   user_id: string | number;
   reporter_name: string | null;
@@ -77,6 +78,7 @@ export type Incident = {
   date: string;
   updatedAt: string | null;
   image: string | null;
+  attachments: string[];
   adminNote: string | null;
   issueLocation: string | null;
   browserLink: string | null;

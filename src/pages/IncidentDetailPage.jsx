@@ -173,7 +173,9 @@ export default function IncidentDetailPage() {
     );
   }
 
-  const attachmentSource = request.image ? assetPath(request.image) : null;
+  const attachmentSources = (
+    request.attachments?.length ? request.attachments : request.image ? [request.image] : []
+  ).map((attachment) => assetPath(attachment));
   const trimmedAdminNote = adminNote.trim();
 
   const handleStatusUpdate = async (event) => {
@@ -311,18 +313,53 @@ export default function IncidentDetailPage() {
               </div>
               <div className="detail-content-block">
                 <h3>Attachment(s)</h3>
-                <div
-                  className={`detail-attachment-box${attachmentSource ? " has-attachment" : ""}`}
-                >
-                  {attachmentSource ? (
-                    <img
-                      src={attachmentSource}
-                      alt={`Attachment for ${request.issue}`}
-                    />
-                  ) : (
+                {attachmentSources.length ? (
+                  <div className="detail-attachments-scroll">
+                    <table className="detail-attachments-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Preview</th>
+                          <th scope="col">Link</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attachmentSources.map((src, index) => (
+                          <tr
+                            key={src ?? index}
+                            className="detail-attachment-row"
+                            onClick={() =>
+                              window.open(src, "_blank", "noopener,noreferrer")
+                            }
+                          >
+                            <td>{index + 1}</td>
+                            <td>
+                              <img
+                                className="detail-attachment-thumb"
+                                src={src}
+                                alt={`Attachment ${index + 1} for ${request.issue}`}
+                              />
+                            </td>
+                            <td>
+                              <a
+                                href={src}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                View
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="detail-attachment-box">
                     <p>No attachment provided.</p>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>

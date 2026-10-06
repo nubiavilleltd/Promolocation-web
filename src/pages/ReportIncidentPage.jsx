@@ -456,7 +456,8 @@ export default function ReportIncidentPage() {
           border-radius: 20px;
           box-shadow: 0 10px 40px rgba(14, 43, 99, 0.08);
           border: 1px solid var(--border-blue);
-          overflow: hidden;
+          overflow-y: auto;
+          max-height: calc(100vh - 220px);
         }
 
         .report-form-premium {

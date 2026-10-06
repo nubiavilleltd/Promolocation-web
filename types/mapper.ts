@@ -133,6 +133,14 @@ export function mapIncident(incident: RawIncident): Incident {
       ? normalizeIncidentDate(incident.updated_at)
       : null,
     image: incident.photo,
+    attachments: Array.isArray(incident.attachments)
+      ? incident.attachments.filter(
+          (attachment): attachment is string =>
+            typeof attachment === "string" && attachment.trim().length > 0,
+        )
+      : incident.photo
+        ? [incident.photo]
+        : [],
     adminNote: incident.admin_note,
     issueLocation: incident.issue_location || null,
     browserLink: incident.browser_link || null,

@@ -147,7 +147,7 @@ export async function createIncident(
     formData.append("browser_link", payload.browserLink);
   }
   payload.attachments?.forEach((attachment) => {
-    formData.append("attachment", attachment);
+    formData.append("attachment[]", attachment);
   });
 
   const response = await apiClient<CreateIncidentResponse>(
