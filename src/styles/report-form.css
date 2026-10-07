@@ -231,8 +231,40 @@
   border-color: #e2e8f0;
   height: auto;
   min-height: 220px;
-  align-items: flex-start;
-  justify-content: center;
+}
+
+.attachment-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.attachment-layout .premium-upload-zone {
+  height: auto;
+  min-height: 220px;
+}
+
+.attachment-table-wrap {
+  min-width: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.attachment-table-empty {
+  color: #94a3b8;
+  font-size: 13px;
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .attachment-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .upload-empty-state {

@@ -425,71 +425,79 @@ export default function IncidentDetailPage() {
 
               <div className="input-field-group report-attachment-field">
                 <label>Attachment(s)</label>
+              <div className="attachment-layout">
                 <div
                   className={`premium-upload-zone ${attachmentSources.length ? "has-file" : ""}`}
                   style={{ cursor: "default" }}
                 >
+                  <div className="upload-empty-state">
+                    <div className="upload-icon-circle">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                    </div>
+                    <p className="upload-prompt">
+                      {attachmentSources.length
+                        ? `${attachmentSources.length} ${attachmentSources.length === 1 ? "file" : "files"}`
+                        : "No attachment provided"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="attachment-table-wrap">
                   {attachmentSources.length ? (
-                    <div className="detail-attachments-scroll">
-                      <table className="detail-attachments-table">
-                        <thead>
-                          <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Preview</th>
-                            <th scope="col">Link</th>
+                    <table className="detail-attachments-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Preview</th>
+                          <th scope="col">Link</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attachmentSources.map((src, index) => (
+                          <tr
+                            key={src ?? index}
+                            className="detail-attachment-row"
+                            onClick={() =>
+                              window.open(src, "_blank", "noopener,noreferrer")
+                            }
+                          >
+                            <td>{index + 1}</td>
+                            <td>
+                              <img
+                                className="detail-attachment-thumb"
+                                src={src}
+                                alt={`Attachment ${index + 1}`}
+                              />
+                            </td>
+                            <td>
+                              <a
+                                href={src}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                View
+                              </a>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {attachmentSources.map((src, index) => (
-                            <tr
-                              key={src ?? index}
-                              className="detail-attachment-row"
-                              onClick={() =>
-                                window.open(src, "_blank", "noopener,noreferrer")
-                              }
-                            >
-                              <td>{index + 1}</td>
-                              <td>
-                                <img
-                                  className="detail-attachment-thumb"
-                                  src={src}
-                                  alt={`Attachment ${index + 1}`}
-                                />
-                              </td>
-                              <td>
-                                <a
-                                  href={src}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={(event) => event.stopPropagation()}
-                                >
-                                  View
-                                </a>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
                   ) : (
-                    <div className="upload-empty-state">
-                      <div className="upload-icon-circle">
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                          <polyline points="17 8 12 3 7 8" />
-                          <line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
-                      </div>
-                      <p className="upload-prompt">No attachment provided</p>
-                    </div>
+                    <p className="attachment-table-empty">No files attached.</p>
                   )}
                 </div>
               </div>
+            </div>
 
               <div className="input-field-group">
                 <label htmlFor="detail-description">Request Details</label>

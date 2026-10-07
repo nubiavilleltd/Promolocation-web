@@ -354,79 +354,15 @@ export default function ReportIncidentPage() {
 
             <div className="input-field-group report-attachment-field">
               <label>Attachment(s)</label>
-              <div
-                className={`premium-upload-zone ${attachments.length ? "has-file" : ""} ${isDraggingAttachment ? "is-dragging" : ""}`}
-                onClick={() => !isSubmitting && fileInputRef.current.click()}
-                onDragOver={handleAttachmentDragOver}
-                onDragEnter={handleAttachmentDragOver}
-                onDragLeave={handleAttachmentDragLeave}
-                onDrop={handleAttachmentDrop}
-              >
-                {attachments.length ? (
-                  <div className="upload-file-state">
-                    <div className="detail-attachments-scroll">
-                      <table className="detail-attachments-table">
-                        <thead>
-                          <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Preview</th>
-                            <th scope="col">Name</th>
-                            <th scope="col"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {attachments.map((file, index) => {
-                            const previewUrl = file instanceof File ? URL.createObjectURL(file) : null;
-                            const isImage =
-                              (typeof file.type === "string" &&
-                                file.type.startsWith("image/")) ||
-                              /\.(png|jpe?g|gif|webp|bmp|svg|heic|avif)$/i.test(file.name);
-                            return (
-                              <tr key={`${file.name}-${file.lastModified}-${index}`}>
-                                <td>{index + 1}</td>
-                                <td>
-                                  {previewUrl && isImage ? (
-                                    <img
-                                      className="detail-attachment-thumb"
-                                      src={previewUrl}
-                                      alt={file.name}
-                                    />
-                                  ) : (
-                                    <span className="upload-icon-circle" style={{ width: 32, height: 32, margin: 0 }}>
-                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                        <polyline points="14 2 14 8 20 8" />
-                                      </svg>
-                                    </span>
-                                  )}
-                                </td>
-                                <td title={file.name}>{file.name}</td>
-                                <td>
-                                  <button
-                                    type="button"
-                                    aria-label={`Remove ${file.name}`}
-                                    disabled={isSubmitting}
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      setAttachments((currentAttachments) =>
-                                        currentAttachments.filter(
-                                          (_, fileIndex) => fileIndex !== index,
-                                        ),
-                                      );
-                                    }}
-                                  >
-                                    Remove
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                    <p className="upload-subtext">Tap to add more files</p>
-                  </div>
-                ) : (
+              <div className="attachment-layout">
+                <div
+                  className={`premium-upload-zone ${attachments.length ? "has-file" : ""} ${isDraggingAttachment ? "is-dragging" : ""}`}
+                  onClick={() => !isSubmitting && fileInputRef.current.click()}
+                  onDragOver={handleAttachmentDragOver}
+                  onDragEnter={handleAttachmentDragOver}
+                  onDragLeave={handleAttachmentDragLeave}
+                  onDrop={handleAttachmentDrop}
+                >
                   <div className="upload-empty-state">
                     <div className="upload-icon-circle">
                       <svg
@@ -440,18 +376,89 @@ export default function ReportIncidentPage() {
                         <line x1="12" y1="3" x2="12" y2="15" />
                       </svg>
                     </div>
-                    <p className="upload-prompt">{attachmentPrompt}</p>
-                    <p className="upload-subtext">{attachmentSubtext}</p>
+                    <p className="upload-prompt">
+                      {attachments.length
+                        ? `${attachments.length} ${attachments.length === 1 ? "file" : "files"} selected`
+                        : attachmentPrompt}
+                    </p>
+                    <p className="upload-subtext">
+                      {attachments.length ? "Tap to add more files" : attachmentSubtext}
+                    </p>
                   </div>
-                )}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleAttachmentChange}
-                  accept="*/*"
-                  multiple
-                  style={{ display: "none" }}
-                />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAttachmentChange}
+                    accept="*/*"
+                    multiple
+                    style={{ display: "none" }}
+                  />
+                </div>
+
+                <div className="attachment-table-wrap">
+                  {attachments.length ? (
+                    <table className="detail-attachments-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Preview</th>
+                          <th scope="col">Name</th>
+                          <th scope="col"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attachments.map((file, index) => {
+                          const previewUrl = file instanceof File ? URL.createObjectURL(file) : null;
+                          const isImage =
+                            (typeof file.type === "string" &&
+                              file.type.startsWith("image/")) ||
+                            /\.(png|jpe?g|gif|webp|bmp|svg|heic|avif)$/i.test(file.name);
+                          return (
+                            <tr key={`${file.name}-${file.lastModified}-${index}`}>
+                              <td>{index + 1}</td>
+                              <td>
+                                {previewUrl && isImage ? (
+                                  <img
+                                    className="detail-attachment-thumb"
+                                    src={previewUrl}
+                                    alt={file.name}
+                                  />
+                                ) : (
+                                  <span className="upload-icon-circle" style={{ width: 32, height: 32, margin: 0 }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                      <polyline points="14 2 14 8 20 8" />
+                                    </svg>
+                                  </span>
+                                )}
+                              </td>
+                              <td title={file.name}>{file.name}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  aria-label={`Remove ${file.name}`}
+                                  disabled={isSubmitting}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setAttachments((currentAttachments) =>
+                                      currentAttachments.filter(
+                                        (_, fileIndex) => fileIndex !== index,
+                                      ),
+                                    );
+                                  }}
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="attachment-table-empty">No files selected yet.</p>
+                  )}
+                </div>
               </div>
             </div>
 
