@@ -10,6 +10,7 @@ import "./styles/add-promoter.css";
 import "./styles/incident-detail.css";
 import "./styles/incident-detail-redesign.css";
 import "./styles/incident-history-redesign.css";
+import "./styles/report-form.css";
 
 const queryClient = new QueryClient();
 

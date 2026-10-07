@@ -111,6 +111,7 @@ export default function IncidentDetailPage() {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [adminNote, setAdminNote] = useState("");
   const adminCommentTextareaRef = useRef(null);
+  const requestDescriptionRef = useRef(null);
   const { incidentId } = useParams();
   const authUser = useAuthStore((state) => state.user);
   const authUserId = authUser?.user_id;
@@ -137,6 +138,7 @@ export default function IncidentDetailPage() {
     : "Request Action";
 
   useAutoResizeTextarea(adminCommentTextareaRef, adminNote);
+  useAutoResizeTextarea(requestDescriptionRef, request?.description || "");
 
   useEffect(() => {
     if (!request) {
@@ -174,7 +176,11 @@ export default function IncidentDetailPage() {
   }
 
   const attachmentSources = (
-    request.attachments?.length ? request.attachments : request.image ? [request.image] : []
+    request.attachments?.length
+      ? request.attachments
+      : request.image
+        ? [request.image]
+        : []
   ).map((attachment) => assetPath(attachment));
   const trimmedAdminNote = adminNote.trim();
 
@@ -216,18 +222,31 @@ export default function IncidentDetailPage() {
     }
 
     try {
-      await updateIncidentRequest({
-        incidentId: request.id,
-        status: selectedStatus,
-        comment: trimmedAdminNote || undefined,
-      });
-
-      await Swal.fire({
+      const successPrompt = Swal.fire({
         title: "Request Updated",
         text: "The request status has been updated successfully.",
         icon: "success",
         confirmButtonColor: "#0E2B63",
       });
+
+      try {
+        await updateIncidentRequest({
+          incidentId: request.id,
+          status: selectedStatus,
+          comment: trimmedAdminNote || undefined,
+        });
+      } catch (updateError) {
+        Swal.close();
+        await Swal.fire({
+          title: "Unable to Update Request",
+          text: updateError?.message || "Something went wrong.",
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
+        return;
+      }
+
+      await successPrompt;
     } catch (updateError) {
       await Swal.fire({
         title: "Unable to Update Request",
@@ -252,116 +271,239 @@ export default function IncidentDetailPage() {
 
         <div className="detail-heading-row">
           <div>
-            <span className="detail-overline">REQUEST TITLE</span>
-            <h1 className="page-title">{request.issue}</h1>
-            <p className="detail-heading-meta">
-              <span>{request.title || request.id}</span>
-            </p>
+            <span className="detail-overline">REQUEST DETAILS</span>
           </div>
-          <span
-            className="status-pill detail-status-pill"
-            style={{
-              color: statusColor,
-              backgroundColor: `${statusColor}14`,
-            }}
-          >
-            <span
-              className="detail-status-dot"
-              style={{ backgroundColor: statusColor }}
-            />
-            {request.status || "Unknown"}
-          </span>
         </div>
 
         <div className="incident-card">
-          <section className="detail-section detail-summary-section">
-            <div className="detail-section-heading">
-              <div>
-                <span className="detail-section-kicker">SUBMITTED</span>
-                <h2>Submitted information</h2>
-              </div>
-            </div>
-            <div className="detail-meta-grid detail-submitted-meta-grid">
-              <div className="detail-meta-item">
-                <span>Request type</span>
-                <strong>{request.requestType || "—"}</strong>
-              </div>
-              <div className="detail-meta-item">
-                <span>Requester</span>
-                <strong>{request.reporterName || "—"}</strong>
-              </div>
-              <div className="detail-meta-item">
-                <span>Priority</span>
-                <strong>{request.priority || "—"}</strong>
-              </div>
-            </div>
-          </section>
-
           <section className="detail-section">
-            <div className="detail-section-heading">
-              <div>
-                <span className="detail-section-kicker">REQUEST</span>
-                <h2>Request details</h2>
-              </div>
-            </div>
-            <div className="detail-content-grid detail-submitted-content-grid">
-              <div className="detail-content-block detail-content-block-wide">
-                <h3>Description</h3>
-                <div className="description-box">
-                  <p>{request.description || "—"}</p>
+            <form
+              className="report-form-premium detail-report-form"
+              onSubmit={(event) => event.preventDefault()}
+            >
+              <div className="request-meta-grid">
+                <div className="input-field-group">
+                  <label htmlFor="detail-date">Submission Date</label>
+                  <input
+                    id="detail-date"
+                    type="text"
+                    value={request.date ? formatLongDate(request.date) : "—"}
+                    placeholder="—"
+                    disabled
+                    readOnly
+                    className="premium-input-field"
+                  />
+                </div>
+
+                <div className="input-field-group">
+                  <label htmlFor="detail-status">Request Status</label>
+                  <div
+                    id="detail-status"
+                    className="premium-input-field"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      background: "#f1f5f9",
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    <span
+                      className="status-pill detail-status-pill"
+                      style={{
+                        color: statusColor,
+                        backgroundColor: `${statusColor}14`,
+                      }}
+                    >
+                      <span
+                        className="detail-status-dot"
+                        style={{ backgroundColor: statusColor }}
+                      />
+                      {request.status || "—"}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="detail-content-block">
-                <h3>Attachment(s)</h3>
-                {attachmentSources.length ? (
-                  <div className="detail-attachments-scroll">
-                    <table className="detail-attachments-table">
-                      <thead>
-                        <tr>
-                          <th scope="col">#</th>
-                          <th scope="col">Preview</th>
-                          <th scope="col">Link</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {attachmentSources.map((src, index) => (
-                          <tr
-                            key={src ?? index}
-                            className="detail-attachment-row"
-                            onClick={() =>
-                              window.open(src, "_blank", "noopener,noreferrer")
-                            }
-                          >
-                            <td>{index + 1}</td>
-                            <td>
-                              <img
-                                className="detail-attachment-thumb"
-                                src={src}
-                                alt={`Attachment ${index + 1} for ${request.issue}`}
-                              />
-                            </td>
-                            <td>
-                              <a
-                                href={src}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                View
-                              </a>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="detail-attachment-box">
-                    <p>No attachment provided.</p>
-                  </div>
-                )}
+
+              <div className="input-field-group">
+                <label htmlFor="detail-title">Request Title</label>
+                <input
+                  id="detail-title"
+                  type="text"
+                  value={request.issue || request.title || "—"}
+                  placeholder="Use a descriptive title that summarizes the request."
+                  disabled
+                  readOnly
+                  className="premium-input-field"
+                />
               </div>
-            </div>
+
+              <div className="report-field-grid">
+                <div className="input-field-group">
+                  <label htmlFor="detail-location">Issue Location</label>
+                  <input
+                    id="detail-location"
+                    type="text"
+                    value={request.issueLocation || "—"}
+                    placeholder="Where did this happen?"
+                    disabled
+                    readOnly
+                    className="premium-input-field"
+                  />
+                </div>
+
+                <div className="input-field-group">
+                  <label htmlFor="detail-browser-link">Browser Link</label>
+                  <input
+                    id="detail-browser-link"
+                    type="url"
+                    value={request.browserLink || "—"}
+                    placeholder="Paste a browser link"
+                    disabled
+                    readOnly
+                    className="premium-input-field"
+                  />
+                </div>
+              </div>
+
+              <div className="request-meta-grid">
+                <div className="input-field-group">
+                  <label htmlFor="detail-requester">Requester</label>
+                  <input
+                    id="detail-requester"
+                    type="text"
+                    value={request.reporterName || "—"}
+                    placeholder="—"
+                    disabled
+                    readOnly
+                    className="premium-input-field"
+                  />
+                </div>
+
+                <div className="input-field-group">
+                  <label htmlFor="detail-requester-email">
+                    Requester Email
+                  </label>
+                  <input
+                    id="detail-requester-email"
+                    type="text"
+                    value={request.reporterEmail || "—"}
+                    placeholder="—"
+                    disabled
+                    readOnly
+                    className="premium-input-field"
+                  />
+                </div>
+
+                <div className="input-field-group">
+                  <label htmlFor="detail-priority">Priority</label>
+                  <select
+                    id="detail-priority"
+                    value={request.priority || "—"}
+                    disabled
+                    className="premium-input-field"
+                  >
+                    <option value={request.priority || "—"}>
+                      {request.priority || "—"}
+                    </option>
+                  </select>
+                </div>
+
+                <div className="input-field-group request-type-field">
+                  <label htmlFor="detail-request-type">Request Type</label>
+                  <select
+                    id="detail-request-type"
+                    value={request.requestType || "—"}
+                    disabled
+                    className="premium-input-field"
+                  >
+                    <option value={request.requestType || "—"}>
+                      {request.requestType || "—"}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="input-field-group report-attachment-field">
+                <label>Attachment(s)</label>
+                <div
+                  className={`premium-upload-zone ${attachmentSources.length ? "has-file" : ""}`}
+                  style={{ cursor: "default" }}
+                >
+                  {attachmentSources.length ? (
+                    <div className="detail-attachments-scroll">
+                      <table className="detail-attachments-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Preview</th>
+                            <th scope="col">Link</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {attachmentSources.map((src, index) => (
+                            <tr
+                              key={src ?? index}
+                              className="detail-attachment-row"
+                              onClick={() =>
+                                window.open(src, "_blank", "noopener,noreferrer")
+                              }
+                            >
+                              <td>{index + 1}</td>
+                              <td>
+                                <img
+                                  className="detail-attachment-thumb"
+                                  src={src}
+                                  alt={`Attachment ${index + 1}`}
+                                />
+                              </td>
+                              <td>
+                                <a
+                                  href={src}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  View
+                                </a>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="upload-empty-state">
+                      <div className="upload-icon-circle">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                      </div>
+                      <p className="upload-prompt">No attachment provided</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="input-field-group">
+                <label htmlFor="detail-description">Request Details</label>
+                <textarea
+                  id="detail-description"
+                  ref={requestDescriptionRef}
+                  value={request.description || "—"}
+                  placeholder="Include the exact change needed and any deadline or context..."
+                  disabled
+                  readOnly
+                  className="premium-textarea-field"
+                />
+              </div>
+            </form>
           </section>
 
           {request.adminNote ? (

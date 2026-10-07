@@ -9,6 +9,7 @@ import { useAuthStore } from "../store/auth-store";
 import { validateFileSize } from "../utils/imageUploadValidation";
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
+const MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024;
 
 function getMissingRequestFields({ requestType, title, description }) {
   const missingFields = [];
@@ -62,8 +63,9 @@ export default function ReportIncidentPage() {
   const selectedRequestType = HELP_DESK_REQUEST_TYPES.find(
     (type) => type.value === requestType,
   );
-  const attachmentPrompt = "Tap to upload files";
-  const attachmentSubtext = "Any file type (Max 3MB per file)";
+  const attachmentPrompt = "Tap to upload files, or drag and drop";
+  const attachmentSubtext = "Any file type (Max 25MB per file)";
+  const [isDraggingAttachment, setIsDraggingAttachment] = useState(false);
 
   useAutoResizeTextarea(descriptionTextareaRef, description);
 
@@ -83,8 +85,8 @@ export default function ReportIncidentPage() {
     setRequestType(nextRequestType);
   };
 
-  const handleAttachmentChange = (event) => {
-    const selectedFiles = Array.from(event.currentTarget.files ?? []);
+  const addAttachments = (incomingFiles) => {
+    const selectedFiles = Array.from(incomingFiles ?? []);
 
     if (!selectedFiles.length) {
       return;
@@ -93,12 +95,11 @@ export default function ReportIncidentPage() {
     const invalidAttachment = selectedFiles
       .map((file) => ({
         file,
-        error: validateFileSize(file, "Attachment"),
+        error: validateFileSize(file, "Attachment", MAX_ATTACHMENT_SIZE_BYTES),
       }))
       .find(({ error }) => error);
 
     if (invalidAttachment) {
-      event.currentTarget.value = "";
       Swal.fire({
         icon: "error",
         title: "Attachment Too Large",
@@ -112,7 +113,38 @@ export default function ReportIncidentPage() {
       ...currentAttachments,
       ...selectedFiles,
     ]);
+  };
+
+  const handleAttachmentChange = (event) => {
+    addAttachments(event.currentTarget.files);
     event.currentTarget.value = "";
+  };
+
+  const handleAttachmentDragOver = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isSubmitting) {
+      setIsDraggingAttachment(true);
+    }
+  };
+
+  const handleAttachmentDragLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingAttachment(false);
+  };
+
+  const handleAttachmentDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingAttachment(false);
+
+    if (isSubmitting) {
+      return;
+    }
+
+    addAttachments(event.dataTransfer?.files);
   };
 
   const handleSubmit = async (event) => {
@@ -138,6 +170,14 @@ export default function ReportIncidentPage() {
 
     setIsSubmitting(true);
 
+    const successPrompt = Swal.fire({
+      icon: "success",
+      title: "Request Submitted",
+      text: "Your request has been submitted successfully.",
+      confirmButtonColor: "#22c55e",
+      confirmButtonText: "OK",
+    });
+
     try {
       const requestTypeLabel = selectedRequestType?.label || "Incident Report";
       const response = await createIncidentRequest({
@@ -153,18 +193,15 @@ export default function ReportIncidentPage() {
       });
 
       const reference = response.incident?.title || "APP-INC-XXXXXX";
-
-      await Swal.fire({
-        icon: "success",
-        title: "Request Submitted",
+      Swal.update({
         text: `Your request has been submitted successfully. Reference: ${reference}`,
-        confirmButtonColor: "#22c55e",
-        confirmButtonText: "OK",
       });
 
+      await successPrompt;
       navigate("/incidents");
     } catch (error) {
       console.error("Failed to submit request:", error);
+      Swal.close();
       Swal.fire({
         icon: "error",
         title: "Submission Failed",
@@ -318,50 +355,75 @@ export default function ReportIncidentPage() {
             <div className="input-field-group report-attachment-field">
               <label>Attachment(s)</label>
               <div
-                className={`premium-upload-zone ${attachments.length ? "has-file" : ""}`}
+                className={`premium-upload-zone ${attachments.length ? "has-file" : ""} ${isDraggingAttachment ? "is-dragging" : ""}`}
                 onClick={() => !isSubmitting && fileInputRef.current.click()}
+                onDragOver={handleAttachmentDragOver}
+                onDragEnter={handleAttachmentDragOver}
+                onDragLeave={handleAttachmentDragLeave}
+                onDrop={handleAttachmentDrop}
               >
                 {attachments.length ? (
                   <div className="upload-file-state">
-                    <div className="upload-icon-circle">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="8" y1="13" x2="16" y2="13" />
-                        <line x1="8" y1="17" x2="16" y2="17" />
-                      </svg>
+                    <div className="detail-attachments-scroll">
+                      <table className="detail-attachments-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Preview</th>
+                            <th scope="col">Name</th>
+                            <th scope="col"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {attachments.map((file, index) => {
+                            const previewUrl = file instanceof File ? URL.createObjectURL(file) : null;
+                            const isImage =
+                              (typeof file.type === "string" &&
+                                file.type.startsWith("image/")) ||
+                              /\.(png|jpe?g|gif|webp|bmp|svg|heic|avif)$/i.test(file.name);
+                            return (
+                              <tr key={`${file.name}-${file.lastModified}-${index}`}>
+                                <td>{index + 1}</td>
+                                <td>
+                                  {previewUrl && isImage ? (
+                                    <img
+                                      className="detail-attachment-thumb"
+                                      src={previewUrl}
+                                      alt={file.name}
+                                    />
+                                  ) : (
+                                    <span className="upload-icon-circle" style={{ width: 32, height: 32, margin: 0 }}>
+                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                      </svg>
+                                    </span>
+                                  )}
+                                </td>
+                                <td title={file.name}>{file.name}</td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    aria-label={`Remove ${file.name}`}
+                                    disabled={isSubmitting}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setAttachments((currentAttachments) =>
+                                        currentAttachments.filter(
+                                          (_, fileIndex) => fileIndex !== index,
+                                        ),
+                                      );
+                                    }}
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                    <p className="upload-prompt">
-                      {attachments.length}{" "}
-                      {attachments.length === 1 ? "file" : "files"} selected
-                    </p>
-                    <ul className="upload-file-list">
-                      {attachments.map((file, index) => (
-                        <li key={`${file.name}-${file.lastModified}-${index}`}>
-                          <span title={file.name}>{file.name}</span>
-                          <button
-                            type="button"
-                            aria-label={`Remove ${file.name}`}
-                            disabled={isSubmitting}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setAttachments((currentAttachments) =>
-                                currentAttachments.filter(
-                                  (_, fileIndex) => fileIndex !== index,
-                                ),
-                              );
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
                     <p className="upload-subtext">Tap to add more files</p>
                   </div>
                 ) : (
@@ -630,9 +692,15 @@ export default function ReportIncidentPage() {
           background: #f8fafc;
         }
 
-        .premium-upload-zone:hover {
+        .premium-upload-zone:hover,
+        .premium-upload-zone.is-dragging {
           border-color: var(--accent-blue);
           background: #f0f9ff;
+        }
+
+        .premium-upload-zone.is-dragging {
+          border-style: solid;
+          box-shadow: 0 0 0 4px rgba(0, 168, 232, 0.15);
         }
 
         .premium-upload-zone.has-image {

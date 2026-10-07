@@ -23,7 +23,9 @@
   margin-bottom: 0;
   font-size: 13px;
   font-weight: 700;
-  transition: color 0.2s, transform 0.2s;
+  transition:
+    color 0.2s,
+    transform 0.2s;
 }
 
 .back-btn svg {
@@ -43,7 +45,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin: 26px 0 24px;
+  margin: 26px 0 8px;
 }
 
 .detail-overline,
@@ -105,7 +107,7 @@
 }
 
 .detail-section {
-  padding: 28px 32px;
+  padding: 10px 20px;
 }
 
 .detail-section + .detail-section {
@@ -352,7 +354,10 @@
   padding: 12px 14px;
   font-size: 14px;
   font-family: inherit;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
 }
 
 .incident-input-group select {
@@ -395,7 +400,10 @@
   padding: 12px 22px;
   font-size: 14px;
   font-weight: 800;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
 }
 
 .resolve-btn:hover:not(:disabled) {

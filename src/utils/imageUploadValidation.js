@@ -3,12 +3,21 @@ export const MAX_UPLOAD_FILE_SIZE_LABEL = "3MB";
 const IMAGE_FILE_EXTENSION_PATTERN =
   /\.(avif|bmp|gif|heic|heif|ico|jpe?g|png|svg|tiff?|webp)$/i;
 
-export function validateFileSize(file, fileLabel = "File") {
-  if (!file || file.size <= MAX_UPLOAD_FILE_SIZE_BYTES) {
+export function validateFileSize(
+  file,
+  fileLabel = "File",
+  maxFileSizeBytes = MAX_UPLOAD_FILE_SIZE_BYTES,
+) {
+  if (!file || file.size <= maxFileSizeBytes) {
     return null;
   }
 
-  return `${fileLabel} must be ${MAX_UPLOAD_FILE_SIZE_LABEL} or smaller.`;
+  const maxSizeLabel =
+    maxFileSizeBytes === MAX_UPLOAD_FILE_SIZE_BYTES
+      ? MAX_UPLOAD_FILE_SIZE_LABEL
+      : `${Math.round(maxFileSizeBytes / (1024 * 1024))}MB`;
+
+  return `${fileLabel} must be ${maxSizeLabel} or smaller.`;
 }
 
 function buildExtensionPattern(extensions) {
@@ -28,6 +37,7 @@ export function validateImageUpload(file, options = {}) {
     allowedMimeTypes,
     allowedExtensions,
     fileLabel = "Image",
+    maxFileSizeBytes,
   } = options;
 
   const hasImageMimeType =
@@ -63,7 +73,7 @@ export function validateImageUpload(file, options = {}) {
     return `Only ${allowedExtensions.join(", ")} files are allowed for ${fileLabel.toLowerCase()}.`;
   }
 
-  const fileSizeError = validateFileSize(file, fileLabel);
+  const fileSizeError = validateFileSize(file, fileLabel, maxFileSizeBytes);
 
   if (fileSizeError) {
     return fileSizeError;
