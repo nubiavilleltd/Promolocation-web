@@ -1,11 +1,16 @@
 import React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import AppLayout from "../components/AppLayout";
 import DataTable from "../components/DataTable";
 import { useIncidentAuditTrail } from "../hooks/use-incident-audit-trail";
-import { useIncidents, useUpdateIncident } from "../hooks/use-incidents";
+import {
+  invalidateIncidentQueries,
+  useIncidents,
+  useUpdateIncident,
+} from "../hooks/use-incidents";
 import { useAutoResizeTextarea } from "../hooks/use-auto-resize-textarea";
 import { useAuthStore } from "../store/auth-store";
 import { isSpecialAdminUser } from "../utils/authAccess";
@@ -116,6 +121,7 @@ export default function IncidentDetailPage() {
   const authUser = useAuthStore((state) => state.user);
   const authUserId = authUser?.user_id;
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: incidents = [] } = useIncidents();
   const { data: auditTrail = [] } = useIncidentAuditTrail({ id: incidentId });
   const { mutateAsync: updateIncidentRequest, isPending: isUpdatingRequest } =
@@ -220,33 +226,39 @@ export default function IncidentDetailPage() {
       return;
     }
 
+    // Blocking loading prompt: success is only shown after the update resolves.
+    Swal.fire({
+      title: "Updating request...",
+      text: "Please wait while the request status is being updated.",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
     try {
-      const successPrompt = Swal.fire({
+      await updateIncidentRequest({
+        incidentId: request.id,
+        status: selectedStatus,
+        comment: trimmedAdminNote || undefined,
+      });
+
+      await Swal.fire({
         title: "Request Updated",
         text: "The request status has been updated successfully.",
         icon: "success",
         confirmButtonColor: "#0E2B63",
       });
 
-      try {
-        await updateIncidentRequest({
-          incidentId: request.id,
-          status: selectedStatus,
-          comment: trimmedAdminNote || undefined,
-        });
-      } catch (updateError) {
-        Swal.close();
-        await Swal.fire({
-          title: "Unable to Update Request",
-          text: updateError?.message || "Something went wrong.",
-          icon: "error",
-          confirmButtonColor: "#d33",
-        });
-        return;
-      }
-
-      await successPrompt;
+      // Refresh the list and audit trail in the background once the user has
+      // acknowledged the success prompt.
+      void invalidateIncidentQueries(
+        queryClient,
+        authUserId ? String(authUserId) : "",
+        request.id,
+      );
     } catch (updateError) {
+      Swal.close();
       await Swal.fire({
         title: "Unable to Update Request",
         text: updateError?.message || "Something went wrong.",

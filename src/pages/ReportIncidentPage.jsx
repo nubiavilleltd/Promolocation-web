@@ -174,12 +174,15 @@ export default function ReportIncidentPage() {
 
     setIsSubmitting(true);
 
-    const successPrompt = Swal.fire({
-      icon: "success",
-      title: "Request Submitted",
-      text: "Your request has been submitted successfully.",
-      confirmButtonColor: "#22c55e",
-      confirmButtonText: "OK",
+    // Blocking loading prompt: keep it open for the whole request so success is
+    // only shown once the backend has actually accepted the submission.
+    Swal.fire({
+      title: "Submitting request...",
+      text: "Please wait while your request is being submitted.",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading(),
     });
 
     try {
@@ -197,16 +200,20 @@ export default function ReportIncidentPage() {
       });
 
       const reference = response.incident?.title || "APP-INC-XXXXXX";
-      Swal.update({
+
+      await Swal.fire({
+        icon: "success",
+        title: "Request Submitted",
         text: `Your request has been submitted successfully. Reference: ${reference}`,
+        confirmButtonColor: "#22c55e",
+        confirmButtonText: "OK",
       });
 
-      await successPrompt;
       navigate("/incidents");
     } catch (error) {
       console.error("Failed to submit request:", error);
       Swal.close();
-      Swal.fire({
+      await Swal.fire({
         icon: "error",
         title: "Submission Failed",
         text:
