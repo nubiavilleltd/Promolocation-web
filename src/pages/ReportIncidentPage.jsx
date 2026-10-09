@@ -10,7 +10,7 @@ import { validateFileSize } from "../utils/imageUploadValidation";
 import { htmlToPlainText } from "../utils/richText";
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
-const MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024;
+const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
 
 function getMissingRequestFields({ requestType, title, hasDescription }) {
   const missingFields = [];
@@ -65,7 +65,7 @@ export default function ReportIncidentPage() {
     (type) => type.value === requestType,
   );
   const attachmentPrompt = "Tap to upload files, or drag and drop";
-  const attachmentSubtext = "Any file type (Max 25MB per file)";
+  const attachmentSubtext = "Any file type (Max 10MB per file)";
   const [isDraggingAttachment, setIsDraggingAttachment] = useState(false);
 
   const resetSelectedAttachments = () => {
