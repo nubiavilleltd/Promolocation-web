@@ -2,16 +2,17 @@ import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import AppLayout from "../components/AppLayout";
+import RichTextEditor from "../components/RichTextEditor";
 import { HELP_DESK_REQUEST_TYPES } from "../data/helpDesk";
-import { useAutoResizeTextarea } from "../hooks/use-auto-resize-textarea";
 import { useCreateIncident } from "../hooks/use-incidents";
 import { useAuthStore } from "../store/auth-store";
 import { validateFileSize } from "../utils/imageUploadValidation";
+import { htmlToPlainText } from "../utils/richText";
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
 const MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024;
 
-function getMissingRequestFields({ requestType, title, description }) {
+function getMissingRequestFields({ requestType, title, hasDescription }) {
   const missingFields = [];
 
   if (!requestType) {
@@ -22,7 +23,7 @@ function getMissingRequestFields({ requestType, title, description }) {
     missingFields.push("Request Title");
   }
 
-  if (!description) {
+  if (!hasDescription) {
     missingFields.push("Request Details");
   }
 
@@ -54,7 +55,7 @@ export default function ReportIncidentPage() {
   const [attachments, setAttachments] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
-  const descriptionTextareaRef = useRef(null);
+  const descriptionEditorRef = useRef(null);
   const navigate = useNavigate();
   const { mutateAsync: createIncidentRequest, isPending } = useCreateIncident();
   const authUser = useAuthStore((state) => state.user);
@@ -66,8 +67,6 @@ export default function ReportIncidentPage() {
   const attachmentPrompt = "Tap to upload files, or drag and drop";
   const attachmentSubtext = "Any file type (Max 25MB per file)";
   const [isDraggingAttachment, setIsDraggingAttachment] = useState(false);
-
-  useAutoResizeTextarea(descriptionTextareaRef, description);
 
   const resetSelectedAttachments = () => {
     setAttachments([]);
@@ -151,11 +150,16 @@ export default function ReportIncidentPage() {
     event.preventDefault();
 
     const trimmedTitle = title.trim();
-    const trimmedDescription = description.trim();
+    const currentDescription =
+      descriptionEditorRef.current?.getHtml() ?? description;
+    const trimmedDescription = currentDescription.trim();
+    const hasDescription =
+      Boolean(htmlToPlainText(trimmedDescription)) ||
+      /<img[\s>]/i.test(trimmedDescription);
     const missingFieldLabels = getMissingRequestFields({
       requestType,
       title: trimmedTitle,
-      description: trimmedDescription,
+      hasDescription,
     });
 
     if (missingFieldLabels.length) {
@@ -263,7 +267,6 @@ export default function ReportIncidentPage() {
                 <input
                   id="request-location"
                   type="text"
-                  placeholder="Where did this happen?"
                   value={location}
                   onChange={(event) => setLocation(event.target.value)}
                   disabled={isSubmitting}
@@ -276,7 +279,6 @@ export default function ReportIncidentPage() {
                 <input
                   id="request-browser-link"
                   type="url"
-                  placeholder="Paste a browser link"
                   value={browserLink}
                   onChange={(event) => setBrowserLink(event.target.value)}
                   disabled={isSubmitting}
@@ -292,13 +294,6 @@ export default function ReportIncidentPage() {
               <input
                 id="request-title"
                 type="text"
-                placeholder={
-                  selectedRequestType?.value === "change_request"
-                    ? "Example: Update promotion dates for Zipline"
-                    : selectedRequestType?.value === "access_request"
-                      ? "Example: Grant Zipline admin access"
-                      : "Use a descriptive title that summarizes the request."
-                }
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 disabled={isSubmitting}
@@ -382,7 +377,9 @@ export default function ReportIncidentPage() {
                         : attachmentPrompt}
                     </p>
                     <p className="upload-subtext">
-                      {attachments.length ? "Tap to add more files" : attachmentSubtext}
+                      {attachments.length
+                        ? "Tap to add more files"
+                        : attachmentSubtext}
                     </p>
                   </div>
                   <input
@@ -408,13 +405,20 @@ export default function ReportIncidentPage() {
                       </thead>
                       <tbody>
                         {attachments.map((file, index) => {
-                          const previewUrl = file instanceof File ? URL.createObjectURL(file) : null;
+                          const previewUrl =
+                            file instanceof File
+                              ? URL.createObjectURL(file)
+                              : null;
                           const isImage =
                             (typeof file.type === "string" &&
                               file.type.startsWith("image/")) ||
-                            /\.(png|jpe?g|gif|webp|bmp|svg|heic|avif)$/i.test(file.name);
+                            /\.(png|jpe?g|gif|webp|bmp|svg|heic|avif)$/i.test(
+                              file.name,
+                            );
                           return (
-                            <tr key={`${file.name}-${file.lastModified}-${index}`}>
+                            <tr
+                              key={`${file.name}-${file.lastModified}-${index}`}
+                            >
                               <td>{index + 1}</td>
                               <td>
                                 {previewUrl && isImage ? (
@@ -424,8 +428,16 @@ export default function ReportIncidentPage() {
                                     alt={file.name}
                                   />
                                 ) : (
-                                  <span className="upload-icon-circle" style={{ width: 32, height: 32, margin: 0 }}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <span
+                                    className="upload-icon-circle"
+                                    style={{ width: 32, height: 32, margin: 0 }}
+                                  >
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    >
                                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                                       <polyline points="14 2 14 8 20 8" />
                                     </svg>
@@ -436,6 +448,7 @@ export default function ReportIncidentPage() {
                               <td>
                                 <button
                                   type="button"
+                                  style={{ color: "red" }}
                                   aria-label={`Remove ${file.name}`}
                                   disabled={isSubmitting}
                                   onClick={(event) => {
@@ -456,7 +469,9 @@ export default function ReportIncidentPage() {
                       </tbody>
                     </table>
                   ) : (
-                    <p className="attachment-table-empty">No files selected yet.</p>
+                    <p className="attachment-table-empty">
+                      No files selected yet.
+                    </p>
                   )}
                 </div>
               </div>
@@ -466,14 +481,13 @@ export default function ReportIncidentPage() {
               <label htmlFor="request-desc">
                 Request Details <span className="required-mark">*</span>
               </label>
-              <textarea
+              <RichTextEditor
                 id="request-desc"
-                ref={descriptionTextareaRef}
-                placeholder="Include the exact change needed and any deadline or context..."
+                ref={descriptionEditorRef}
                 value={description}
-                onChange={(event) => setDescription(event.target.value)}
+                onChange={setDescription}
                 disabled={isSubmitting}
-                className="premium-textarea-field"
+                minHeight={240}
               />
             </div>
 

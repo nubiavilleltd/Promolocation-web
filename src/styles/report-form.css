@@ -196,6 +196,109 @@
   cursor: not-allowed;
 }
 
+/* Rich text (Summernote) request details editor */
+.premium-rich-editor {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.premium-rich-editor:focus-within {
+  border-color: var(--accent-blue);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(0, 168, 232, 0.1);
+}
+
+.premium-rich-editor .note-editor.note-frame {
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  margin-bottom: 0;
+}
+
+/* Toolbar is hidden (toolbar: []); keep it out of the layout if ever rendered. */
+.premium-rich-editor .note-toolbar {
+  display: none;
+}
+
+.premium-rich-editor .note-editable {
+  background: transparent;
+  padding: 16px;
+  min-height: 180px;
+  color: var(--text-primary, #334d72);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.premium-rich-editor .note-editable:focus {
+  outline: none;
+}
+
+.premium-rich-editor .note-editable img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.premium-rich-editor .note-placeholder {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+.premium-rich-editor .note-statusbar {
+  display: none;
+}
+
+.rich-editor-hint {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* Read-only rich text rendering on the request detail view */
+.rich-text-display {
+  min-height: 120px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.rich-text-display p {
+  margin: 0 0 10px;
+}
+
+.rich-text-display p:last-child,
+.rich-text-display ul:last-child,
+.rich-text-display ol:last-child {
+  margin-bottom: 0;
+}
+
+.rich-text-display ul,
+.rich-text-display ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+
+.rich-text-display img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.rich-text-display a {
+  color: var(--accent-blue);
+}
+
 .premium-upload-zone {
   border: 2px dashed #cbd5e1;
   border-radius: 16px;

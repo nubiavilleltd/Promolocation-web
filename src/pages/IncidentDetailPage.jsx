@@ -11,6 +11,7 @@ import { useAuthStore } from "../store/auth-store";
 import { isSpecialAdminUser } from "../utils/authAccess";
 import { assetPath } from "../utils/assetPath";
 import { formatLongDate, getIncidentStatusColor } from "../utils/formatters";
+import { formatRichTextForDisplay } from "../utils/richText";
 import {
   REGULAR_ADMIN_TEAM_LABEL,
   SPECIAL_ADMIN_TEAM_LABEL,
@@ -111,7 +112,6 @@ export default function IncidentDetailPage() {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [adminNote, setAdminNote] = useState("");
   const adminCommentTextareaRef = useRef(null);
-  const requestDescriptionRef = useRef(null);
   const { incidentId } = useParams();
   const authUser = useAuthStore((state) => state.user);
   const authUserId = authUser?.user_id;
@@ -138,7 +138,6 @@ export default function IncidentDetailPage() {
     : "Request Action";
 
   useAutoResizeTextarea(adminCommentTextareaRef, adminNote);
-  useAutoResizeTextarea(requestDescriptionRef, request?.description || "");
 
   useEffect(() => {
     if (!request) {
@@ -330,7 +329,6 @@ export default function IncidentDetailPage() {
                   id="detail-title"
                   type="text"
                   value={request.issue || request.title || "—"}
-                  placeholder="Use a descriptive title that summarizes the request."
                   disabled
                   readOnly
                   className="premium-input-field"
@@ -344,7 +342,6 @@ export default function IncidentDetailPage() {
                     id="detail-location"
                     type="text"
                     value={request.issueLocation || "—"}
-                    placeholder="Where did this happen?"
                     disabled
                     readOnly
                     className="premium-input-field"
@@ -357,7 +354,6 @@ export default function IncidentDetailPage() {
                     id="detail-browser-link"
                     type="url"
                     value={request.browserLink || "—"}
-                    placeholder="Paste a browser link"
                     disabled
                     readOnly
                     className="premium-input-field"
@@ -425,90 +421,95 @@ export default function IncidentDetailPage() {
 
               <div className="input-field-group report-attachment-field">
                 <label>Attachment(s)</label>
-              <div className="attachment-layout">
-                <div
-                  className={`premium-upload-zone ${attachmentSources.length ? "has-file" : ""}`}
-                  style={{ cursor: "default" }}
-                >
-                  <div className="upload-empty-state">
-                    <div className="upload-icon-circle">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
+                <div className="attachment-layout">
+                  <div
+                    className={`premium-upload-zone ${attachmentSources.length ? "has-file" : ""}`}
+                    style={{ cursor: "default" }}
+                  >
+                    <div className="upload-empty-state">
+                      <div className="upload-icon-circle">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                      </div>
+                      <p className="upload-prompt">
+                        {attachmentSources.length
+                          ? `${attachmentSources.length} ${attachmentSources.length === 1 ? "file" : "files"}`
+                          : "No attachment provided"}
+                      </p>
                     </div>
-                    <p className="upload-prompt">
-                      {attachmentSources.length
-                        ? `${attachmentSources.length} ${attachmentSources.length === 1 ? "file" : "files"}`
-                        : "No attachment provided"}
-                    </p>
+                  </div>
+
+                  <div className="attachment-table-wrap">
+                    {attachmentSources.length ? (
+                      <table className="detail-attachments-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Preview</th>
+                            <th scope="col">Link</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {attachmentSources.map((src, index) => (
+                            <tr
+                              key={src ?? index}
+                              className="detail-attachment-row"
+                              onClick={() =>
+                                window.open(
+                                  src,
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                              }
+                            >
+                              <td>{index + 1}</td>
+                              <td>
+                                <img
+                                  className="detail-attachment-thumb"
+                                  src={src}
+                                  alt={`Attachment ${index + 1}`}
+                                />
+                              </td>
+                              <td>
+                                <a
+                                  href={src}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  View
+                                </a>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="attachment-table-empty">
+                        No files attached.
+                      </p>
+                    )}
                   </div>
                 </div>
-
-                <div className="attachment-table-wrap">
-                  {attachmentSources.length ? (
-                    <table className="detail-attachments-table">
-                      <thead>
-                        <tr>
-                          <th scope="col">#</th>
-                          <th scope="col">Preview</th>
-                          <th scope="col">Link</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {attachmentSources.map((src, index) => (
-                          <tr
-                            key={src ?? index}
-                            className="detail-attachment-row"
-                            onClick={() =>
-                              window.open(src, "_blank", "noopener,noreferrer")
-                            }
-                          >
-                            <td>{index + 1}</td>
-                            <td>
-                              <img
-                                className="detail-attachment-thumb"
-                                src={src}
-                                alt={`Attachment ${index + 1}`}
-                              />
-                            </td>
-                            <td>
-                              <a
-                                href={src}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                View
-                              </a>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="attachment-table-empty">No files attached.</p>
-                  )}
-                </div>
               </div>
-            </div>
 
               <div className="input-field-group">
                 <label htmlFor="detail-description">Request Details</label>
-                <textarea
+                <div
                   id="detail-description"
-                  ref={requestDescriptionRef}
-                  value={request.description || "—"}
-                  placeholder="Include the exact change needed and any deadline or context..."
-                  disabled
-                  readOnly
-                  className="premium-textarea-field"
+                  className="rich-text-display"
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      formatRichTextForDisplay(request.description) || "—",
+                  }}
                 />
               </div>
             </form>
