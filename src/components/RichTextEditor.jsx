@@ -69,8 +69,85 @@ const RichTextEditor = forwardRef(function RichTextEditor(
       toolbar: [],
       callbacks: {
         onChange: (contents) => {
+          // Detect newly added images and place the cursor after the last one
+          const hasNewImage =
+            /<img[\s>]/i.test(contents) &&
+            !/<img[\s>]/i.test(lastEmittedValueRef.current);
+
           lastEmittedValueRef.current = contents;
           onChangeRef.current?.(contents);
+
+          if (hasNewImage) {
+            // Use setTimeout to let Summernote finish its internal DOM update
+            setTimeout(() => {
+              const $imgs = $editor.find("img");
+              if ($imgs.length === 0) return;
+
+              const lastImg = $imgs.last()[0];
+              const range = $editor.summernote("createRange");
+              range.setStartAfter(lastImg);
+              range.collapse(true);
+
+              const selection = window.getSelection();
+              if (selection) {
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+            }, 10);
+          }
+        },
+        onInit: function () {
+          const $editable = $editor.find(".note-editable");
+
+          // Show a remove button when clicking on an image
+          $editable.on("click", "img", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Remove any existing remove button
+            $editable.find(".img-remove-btn").remove();
+
+            const $img = $(this);
+            const $btn = $(
+              '<button class="img-remove-btn" title="Remove image" type="button">&times;</button>'
+            );
+
+            // Position the button at the top-right corner of the image
+            const imgOffset = $img.offset();
+            const editableOffset = $editable.offset();
+            $btn.css({
+              position: "absolute",
+              top: imgOffset.top - editableOffset.top + "px",
+              left:
+                imgOffset.left -
+                editableOffset.left +
+                $img.outerWidth() -
+                20 +
+                "px",
+              zIndex: 9999,
+            });
+
+            $btn.on("click", function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              $img.remove();
+              $(this).remove();
+
+              // Update the editor content after removal
+              const newContents = $editor.summernote("code");
+              lastEmittedValueRef.current = newContents;
+              onChangeRef.current?.(newContents);
+            });
+
+            $editable.append($btn);
+          });
+
+          // Remove the button when clicking elsewhere
+          $editable.on("click", function (e) {
+            if (!$(e.target).is("img")) {
+              $editable.find(".img-remove-btn").remove();
+            }
+          });
         },
       },
     });

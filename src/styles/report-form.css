@@ -226,6 +226,7 @@
 }
 
 .premium-rich-editor .note-editable {
+  position: relative;
   background: transparent;
   padding: 16px;
   min-height: 180px;
@@ -242,6 +243,31 @@
   max-width: 100%;
   height: auto;
   border-radius: 8px;
+}
+
+/* Remove button shown on clicked images */
+.premium-rich-editor .note-editable .img-remove-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.premium-rich-editor .note-editable .img-remove-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
 }
 
 .premium-rich-editor .note-placeholder {

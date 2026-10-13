@@ -36,6 +36,7 @@ export function validateImageUpload(file, options = {}) {
   const {
     allowedMimeTypes,
     allowedExtensions,
+    allowNonImage = false,
     fileLabel = "Image",
     maxFileSizeBytes,
   } = options;
@@ -65,7 +66,10 @@ export function validateImageUpload(file, options = {}) {
         ? `Only ${extensionList} files are allowed for ${fileLabel.toLowerCase()}.`
         : `Only supported image files are allowed for ${fileLabel.toLowerCase()}.`;
     }
-  } else if (hasExplicitNonImageMimeType || (!hasImageMimeType && !defaultHasImageExtension)) {
+  } else if (
+    !allowNonImage &&
+    (hasExplicitNonImageMimeType || (!hasImageMimeType && !defaultHasImageExtension))
+  ) {
     return "Only image files are allowed.";
   }
 

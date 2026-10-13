@@ -6,11 +6,21 @@ import RichTextEditor from "../components/RichTextEditor";
 import { HELP_DESK_REQUEST_TYPES } from "../data/helpDesk";
 import { useCreateIncident } from "../hooks/use-incidents";
 import { useAuthStore } from "../store/auth-store";
-import { validateFileSize } from "../utils/imageUploadValidation";
+import {
+  validateFileSize,
+  validateImageUpload,
+} from "../utils/imageUploadValidation";
 import { htmlToPlainText } from "../utils/richText";
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
-const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_EXTENSIONS = [
+  "jpg", "jpeg", "png", "gif", "bmp", "svg", "webp",
+  "avif", "heic", "heif", "ico", "tif", "tiff",
+  "pdf", "docx", "csv", "xls", "xlsx",
+];
+const ATTACHMENT_FILE_INPUT_ACCEPT =
+  "image/*,.pdf,.docx,.csv,.xls,.xlsx";
 
 function getMissingRequestFields({ requestType, title, hasDescription }) {
   const missingFields = [];
@@ -65,7 +75,7 @@ export default function ReportIncidentPage() {
     (type) => type.value === requestType,
   );
   const attachmentPrompt = "Tap to upload files, or drag and drop";
-  const attachmentSubtext = "Any file type (Max 10MB per file)";
+  const attachmentSubtext = "Images, PDF, DOCX, CSV, Excel (Max 25MB per file)";
   const [isDraggingAttachment, setIsDraggingAttachment] = useState(false);
 
   const resetSelectedAttachments = () => {
@@ -115,7 +125,32 @@ export default function ReportIncidentPage() {
   };
 
   const handleAttachmentChange = (event) => {
-    addAttachments(event.currentTarget.files);
+    const files = event.currentTarget.files;
+
+    if (files?.length) {
+      for (const file of files) {
+        const validationError = validateImageUpload(file, {
+          allowedExtensions: ALLOWED_ATTACHMENT_EXTENSIONS,
+          allowNonImage: true,
+          maxFileSizeBytes: MAX_ATTACHMENT_SIZE_BYTES,
+          fileLabel: "File",
+        });
+
+        if (validationError) {
+          Swal.fire({
+            icon: "error",
+            title: "Invalid File",
+            text: validationError,
+            confirmButtonColor: "#d33",
+          });
+          event.currentTarget.value = "";
+          return;
+        }
+      }
+
+      addAttachments(files);
+    }
+
     event.currentTarget.value = "";
   };
 
@@ -393,7 +428,7 @@ export default function ReportIncidentPage() {
                     type="file"
                     ref={fileInputRef}
                     onChange={handleAttachmentChange}
-                    accept="*/*"
+                    accept={ATTACHMENT_FILE_INPUT_ACCEPT}
                     multiple
                     style={{ display: "none" }}
                   />
