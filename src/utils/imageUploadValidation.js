@@ -3,6 +3,40 @@ export const MAX_UPLOAD_FILE_SIZE_LABEL = "3MB";
 const IMAGE_FILE_EXTENSION_PATTERN =
   /\.(avif|bmp|gif|heic|heif|ico|jpe?g|png|svg|tiff?|webp)$/i;
 
+const FILE_EXTENSION_PATTERN = /\.([a-z0-9]{1,10})(?:[?#].*)?$/i;
+
+/**
+ * Pulls the extension out of a file name or URL. Returns a lowercase
+ * extension without the dot, or an empty string when there is none.
+ */
+export function getFileExtension(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return "";
+  }
+
+  const withoutQuery = value.split(/[?#]/)[0];
+  const match = FILE_EXTENSION_PATTERN.exec(withoutQuery);
+
+  return match ? match[1].toLowerCase() : "";
+}
+
+/**
+ * Whether a file name or URL looks like an image, based on its extension.
+ */
+export function isImageSource(value) {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  if (/^data:image\//i.test(value)) {
+    return true;
+  }
+
+  const extension = getFileExtension(value);
+
+  return Boolean(extension) && IMAGE_FILE_EXTENSION_PATTERN.test(`.${extension}`);
+}
+
 export function validateFileSize(
   file,
   fileLabel = "File",

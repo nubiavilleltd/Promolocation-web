@@ -15,6 +15,10 @@ import { useAutoResizeTextarea } from "../hooks/use-auto-resize-textarea";
 import { useAuthStore } from "../store/auth-store";
 import { isSpecialAdminUser } from "../utils/authAccess";
 import { assetPath } from "../utils/assetPath";
+import {
+  getFileExtension,
+  isImageSource,
+} from "../utils/imageUploadValidation";
 import { formatLongDate, getIncidentStatusColor } from "../utils/formatters";
 import { formatRichTextForDisplay } from "../utils/richText";
 import {
@@ -32,6 +36,50 @@ const ADMIN_REQUEST_ACTIONS = {
 const SPECIAL_ADMIN_REQUEST_ACTIONS = {
   Resolved: ["Not Resolved", "Closed"],
 };
+
+const PDF_FILE_EXTENSION = "pdf";
+
+function AttachmentPreview({ src, index }) {
+  const extension = getFileExtension(src);
+  const label = extension ? extension.toUpperCase() : "FILE";
+
+  // Images always render as an image. There is deliberately no fallback for
+  // them, so a file that will not load shows the browser's own broken-image
+  // indicator rather than a placeholder.
+  if (isImageSource(src)) {
+    return (
+      <img
+        className="detail-attachment-thumb"
+        src={src}
+        alt={`Attachment ${index + 1}`}
+      />
+    );
+  }
+
+  return (
+    <span
+      className={`detail-attachment-file ${extension === PDF_FILE_EXTENSION ? "is-pdf" : ""}`}
+      role="img"
+      aria-label={`${label} file`}
+      title={src}
+    >
+      <svg
+        className="detail-attachment-file-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+      </svg>
+      <span className="detail-attachment-file-label">{label}</span>
+    </span>
+  );
+}
 
 function getAvailableRequestStatusOptions(currentStatus, isSpecialAdmin) {
   if (!currentStatus) {
@@ -484,10 +532,9 @@ export default function IncidentDetailPage() {
                             >
                               <td>{index + 1}</td>
                               <td>
-                                <img
-                                  className="detail-attachment-thumb"
+                                <AttachmentPreview
                                   src={src}
-                                  alt={`Attachment ${index + 1}`}
+                                  index={index}
                                 />
                               </td>
                               <td>
@@ -497,7 +544,7 @@ export default function IncidentDetailPage() {
                                   rel="noreferrer"
                                   onClick={(event) => event.stopPropagation()}
                                 >
-                                  View
+                                  {isImageSource(src) ? "View" : "Open"}
                                 </a>
                               </td>
                             </tr>
